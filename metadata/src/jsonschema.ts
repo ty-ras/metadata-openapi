@@ -50,16 +50,15 @@ const handleSchemaRecord = <
 >(
   record: Record<string, TValue> | undefined,
 ): Record<string, TValue> | undefined => {
-  if (record !== undefined) {
-    for (const [key, val] of Object.entries(record)) {
-      if (val !== undefined && !Array.isArray(val)) {
-        record[key] = convertBooleanSchemasToObjects(
-          val,
-        ) as typeof record[string];
-      }
-    }
-  }
-  return record;
+  return record === undefined
+    ? record
+    : Object.entries(record).reduce((newRecord, [key, val]) => {
+        newRecord[key] =
+          val !== undefined && !Array.isArray(val)
+            ? (convertBooleanSchemasToObjects(val) as typeof newRecord[string])
+            : val;
+        return newRecord;
+      }, {} as typeof record);
 };
 
 const stripUndefineds = <T extends Record<string, unknown>>(val: T): T => {
