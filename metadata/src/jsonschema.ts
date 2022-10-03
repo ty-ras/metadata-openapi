@@ -49,8 +49,8 @@ const handleSchemaRecord = <
   TValue extends jsonSchemaPlugin.JSONSchema | undefined | string[],
 >(
   record: Record<string, TValue> | undefined,
-): Record<string, TValue> | undefined => {
-  return record === undefined
+): Record<string, TValue> | undefined =>
+  record === undefined
     ? record
     : Object.entries(record).reduce((newRecord, [key, val]) => {
         newRecord[key] =
@@ -59,7 +59,6 @@ const handleSchemaRecord = <
             : val;
         return newRecord;
       }, {} as typeof record);
-};
 
 const stripUndefineds = <T extends Record<string, unknown>>(val: T): T => {
   for (const key of Object.keys(val)) {
