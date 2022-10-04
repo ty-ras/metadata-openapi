@@ -6,6 +6,7 @@ import type * as jsonSchemaPlugin from "@ty-ras/metadata-jsonschema";
 import type { OpenAPIV3 as openapi } from "openapi-types";
 import * as types from "./openapi";
 
+// This provider is meant to be passed over to AppEndpointBuilder within @ty-ras/spec package, instead of using the methods directly.
 export const createOpenAPIProvider = <
   TStringDecoder,
   TStringEncoder,
@@ -220,6 +221,7 @@ const getResponseBody = (
   for (const [contentType, contentOutput] of contentEntries) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
     if (getUndefinedPossibility(contentOutput as any)) {
+      // TODO - we probably can have both 204 and 200 possibilities...?
       hasResponse204 = true;
     } else {
       response200Entries.push([contentType, contentOutput]);
