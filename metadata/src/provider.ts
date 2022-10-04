@@ -4,7 +4,7 @@ import type * as dataBE from "@ty-ras/data-backend";
 import type * as jsonSchemaPlugin from "@ty-ras/metadata-jsonschema";
 
 import type { OpenAPIV3 as openapi } from "openapi-types";
-import type * as types from "./openapi";
+import * as types from "./openapi";
 
 export const createOpenAPIProvider = <
   TStringDecoder,
@@ -45,13 +45,18 @@ export const createOpenAPIProvider = <
     initialContextArgs,
     (context) => ({
       getEndpointsMetadata: (pathItemBase, urlSpec, methods) => {
-        const pathObject: openapi.PathItemObject = { ...pathItemBase };
-        // URL path parameters as common parameters for all operations under this URL path
-        pathObject.parameters = getURLParameters(stringDecoder, urlSpec);
-        for (const [method, epInfo] of Object.entries(methods)) {
-          if (epInfo) {
-            pathObject[method.toLowerCase() as Lowercase<openapi.HttpMethods>] =
-              getOperationObject(
+        if (Object.keys(methods).length > 0) {
+          const pathObject: openapi.PathItemObject = { ...pathItemBase };
+          const urlParameters = getURLParameters(stringDecoder, urlSpec);
+          if (urlParameters.length > 0) {
+            // URL path parameters as common parameters for all operations under this URL path
+            pathObject.parameters = urlParameters;
+          }
+          for (const [method, epInfo] of Object.entries(methods)) {
+            if (epInfo) {
+              pathObject[
+                method.toLowerCase() as Lowercase<openapi.HttpMethods>
+              ] = getOperationObject(
                 getAnyUndefinedPossibility,
                 generateDecoderJSONSchema,
                 generateEncoderJSONSchema,
@@ -60,19 +65,16 @@ export const createOpenAPIProvider = <
                 context,
                 epInfo,
               );
+            }
           }
+          const urlString = getUrlPathString(urlSpec);
+          return (urlPrefix) => ({
+            urlPath: `${urlPrefix}${urlString}`,
+            pathObject,
+          });
+        } else {
+          return () => undefined;
         }
-        const urlString = urlSpec
-          .map((stringOrSpec) =>
-            typeof stringOrSpec === "string"
-              ? stringOrSpec
-              : `{${stringOrSpec.name}}`,
-          )
-          .join("");
-        return (urlPrefix) => ({
-          urlPath: `${urlPrefix}${urlString}`,
-          pathObject,
-        });
       },
     }),
     ({ securitySchemes }, info, paths) => {
@@ -87,7 +89,9 @@ export const createOpenAPIProvider = <
         openapi: "3.0.3",
         info,
         paths: Object.fromEntries(
-          paths.map(({ urlPath, pathObject }) => [urlPath, pathObject]),
+          paths
+            .filter((info): info is types.PathsObjectInfo => !!info)
+            .map(({ urlPath, pathObject }) => [urlPath, pathObject]),
         ),
       };
       if (Object.keys(components).length > 0) {
@@ -341,6 +345,17 @@ const getContentMap = (
       ),
     ]),
   );
+
+const getUrlPathString = <TStringDecoder>(
+  urlSpec: md.URLParametersInfo<TStringDecoder>,
+) =>
+  urlSpec
+    .map((stringOrSpec) =>
+      typeof stringOrSpec === "string"
+        ? stringOrSpec
+        : `{${stringOrSpec.name}}`,
+    )
+    .join("");
 
 type ContentTypeDecodersOrEncoders = Array<[string, unknown]>;
 

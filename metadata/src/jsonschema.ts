@@ -16,7 +16,7 @@ const convertBooleanSchemasToObjects = (
       ? {}
       : { not: {} }
     : stripUndefineds({
-        ...schema,
+        ...transformConstToEnum(schema),
         items: handleSchemaOrArray(schema.items),
         additionalItems: handleSchemaOrArray(schema.additionalItems),
         properties: handleSchemaRecord(schema.properties),
@@ -33,6 +33,22 @@ const convertBooleanSchemasToObjects = (
         not: handleSchemaOrArray(schema.not),
         definitions: handleSchemaRecord(schema.definitions),
       });
+
+// 'const', while present in actual JSON Schema, is not supported by OpenAPI JSON Schema spec.
+const transformConstToEnum = (schema: jsonSchema.JSONSchema7) => {
+  let copied = false;
+  if ("const" in schema) {
+    const { const: constValue, ...schemaObj } = schema;
+    if (constValue !== undefined) {
+      copied = true;
+      schema = {
+        enum: [constValue],
+        ...schemaObj,
+      };
+    }
+  }
+  return copied ? schema : { ...schema };
+};
 
 const handleSchemaOrArray = <
   T extends jsonSchemaPlugin.JSONSchema | Array<jsonSchemaPlugin.JSONSchema>,

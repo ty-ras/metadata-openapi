@@ -94,7 +94,7 @@ export type OpenAPIMetadataProvider<
 > = md.MetadataProvider<
   OpenAPIArguments,
   OpenAPIPathItemArg,
-  PathsObjectInfo,
+  OpenAPIEndpointMD,
   OpenAPIContextArgs,
   TStringDecoder,
   TStringEncoder,
@@ -112,9 +112,11 @@ export type OpenAPIMetadataBuilder<
 > = md.MetadataBuilder<
   OpenAPIArguments,
   OpenAPIPathItemArg,
-  PathsObjectInfo,
+  OpenAPIEndpointMD,
   TStringDecoder,
   TStringEncoder,
   TOutputContents,
   TInputContents
 >;
+
+export type OpenAPIEndpointMD = PathsObjectInfo | undefined;
