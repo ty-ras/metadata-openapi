@@ -8,3 +8,6 @@ The protocol specification is checked both at compile-time and run-time to verif
 This all is done in such way that it does not make development tedious or boring, but instead robust and fun!
 
 This particular repository contains [OpenAPI Specification](https://swagger.io/specification/) related library, which is designed to be consumed by users of TyRAS:
+- [metadata](./metadata) folder contains library that exposes `createOpenAPIProvider` function.
+  The result of this function can be used in [@ty-ras/spec](https://github.com/ty-ras/server/) library to augment the builder of TyRAS `AppEndpoint`s to automatically generate OpenAPI `Document` based on the metadata of the endpoints.
+  Full document including JSON schema specifications can be generated.
