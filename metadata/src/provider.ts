@@ -18,11 +18,21 @@ export const createOpenAPIProvider = <
   encoders,
   decoders,
   getUndefinedPossibility,
-}: OpenAPIJSONSchemaGenerationSupport<
+}: // Notice that if we encapsulate this as separate type (e.g. OpenAPIJSONSchemaGenerationSupport), the usecase of passing it to AppEndpointBuilder will start requiring specifying generic arguments for this method!
+jsonSchemaPlugin.SupportedJSONSchemaFunctionality<
+  openapi.SchemaObject,
   TStringDecoder,
   TStringEncoder,
-  TOutputContents,
-  TInputContents
+  {
+    [P in keyof TOutputContents]: jsonSchemaPlugin.SchemaTransformation<
+      TOutputContents[P]
+    >;
+  },
+  {
+    [P in keyof TInputContents]: jsonSchemaPlugin.SchemaTransformation<
+      TInputContents[P]
+    >;
+  }
 >): types.OpenAPIMetadataProvider<
   TStringDecoder,
   TStringEncoder,
@@ -103,34 +113,13 @@ export const createOpenAPIProvider = <
   );
 };
 
-export type OpenAPIJSONSchemaGenerationSupport<
-  TStringDecoder,
-  TStringEncoder,
-  TOutputContents extends dataBE.TOutputContentsBase,
-  TInputContents extends dataBE.TInputContentsBase,
-> = jsonSchemaPlugin.SupportedJSONSchemaFunctionality<
-  openapi.SchemaObject,
-  TStringDecoder,
-  TStringEncoder,
-  {
-    [P in keyof TOutputContents]: jsonSchemaPlugin.SchemaTransformation<
-      TOutputContents[P]
-    >;
-  },
-  {
-    [P in keyof TInputContents]: jsonSchemaPlugin.SchemaTransformation<
-      TInputContents[P]
-    >;
-  }
->;
-
 const getOperationObject = <
   TStringDecoder,
   TStringEncoder,
   TOutputContents extends dataBE.TOutputContentsBase,
   TInputContents extends dataBE.TInputContentsBase,
 >(
-  getUndefinedPossibility: GetUndefinedPossibility,
+  getUndefinedPossibility: GetUndefinedPossibility<unknown>,
   generateDecoderJSONSchema: GenerateAnyJSONSchema,
   generateEncoderJSONSchema: GenerateAnyJSONSchema,
   stringDecoder: StringDecoderOrEncoder<TStringDecoder>,
@@ -210,7 +199,7 @@ const getURLParameters = <TStringDecoder>(
     }));
 
 const getResponseBody = (
-  getUndefinedPossibility: GetUndefinedPossibility,
+  getUndefinedPossibility: GetUndefinedPossibility<unknown>,
   generateJSONSchema: GenerateAnyJSONSchema,
   outputSpec: dataBE.DataValidatorResponseOutputValidatorSpec<dataBE.TOutputContentsBase>,
   output: types.OpenAPIArgumentsOutput<unknown>["output"],
@@ -298,7 +287,7 @@ const getQuery = <TStringDecoder>(
   );
 
 const getRequestBody = (
-  getUndefinedPossibility: GetUndefinedPossibility,
+  getUndefinedPossibility: GetUndefinedPossibility<unknown>,
   generateJSONSchema: GenerateAnyJSONSchema,
   inputSpec:
     | dataBE.DataValidatorResponseInputValidatorSpec<dataBE.TInputContentsBase>
@@ -366,7 +355,9 @@ type GenerateAnyJSONSchema = (
 ) => openapi.SchemaObject | undefined;
 
 // TODO this should really be in metadata-jsonschema library
-type GetUndefinedPossibility = (encoderOrDecoder: unknown) => boolean;
+type GetUndefinedPossibility<TDecoderOrEncoder> = (
+  encoderOrDecoder: TDecoderOrEncoder,
+) => boolean;
 type StringDecoderOrEncoder<TStringTransformer> = jsonSchemaPlugin.Transformer<
   TStringTransformer,
   openapi.SchemaObject
