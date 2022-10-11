@@ -4,6 +4,7 @@
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src",
+    "baseUrl": "./src",
     "tsBuildInfoFile": "./build/tsconfig.tsbuildinfo"
   },
   "include": [
