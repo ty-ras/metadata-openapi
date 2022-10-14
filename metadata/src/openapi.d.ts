@@ -101,7 +101,7 @@ export type OpenAPIMetadataProvider<
   TOutputContents,
   TInputContents,
   openapi.InfoObject,
-  openapi.Document
+  FinalMetadata
 >;
 
 export type OpenAPIMetadataBuilder<
@@ -120,3 +120,5 @@ export type OpenAPIMetadataBuilder<
 >;
 
 export type OpenAPIEndpointMD = PathsObjectInfo | undefined;
+
+export type FinalMetadata = openapi.Document;
