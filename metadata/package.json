@@ -1,6 +1,6 @@
 {
   "name": "@ty-ras/metadata-openapi",
-  "version": "0.10.1",
+  "version": "0.11.0",
   "author": {
     "name": "Stanislav Muhametsin",
     "email": "346799+stazz@users.noreply.github.com",
@@ -31,8 +31,8 @@
     }
   },
   "dependencies": {
-    "@ty-ras/metadata": "0.10.3",
-    "@ty-ras/metadata-jsonschema": "0.10.1"
+    "@ty-ras/metadata": "0.11.0",
+    "@ty-ras/metadata-jsonschema": "0.11.0"
   },
   "peerDependencies": {
     "openapi-types": "^12.0.2"
@@ -52,6 +52,7 @@
     "eslint-plugin-sonarjs": "0.15.0",
     "openapi-types": "12.0.2",
     "prettier": "2.7.1",
+    "raw-body": "2.5.1",
     "ts-node": "10.9.1",
     "typescript": "4.8.3"
   },
@@ -60,7 +61,7 @@
     "build:ci": "yarn run clear-build-artifacts && yarn run tsc --removeComments false --emitDeclarationOnly --declaration --declarationDir ./dist-ts && yarn run copy-d-ts-files && yarn run tsc --outDir ./dist-mjs && yarn run rename-js-to-mjs && yarn run tsc --module CommonJS --outDir ./dist-cjs && yarn run format-output-files",
     "clear-build-artifacts": "rm -rf dist dist-ts dist-cjs dist-mjs build",
     "copy-d-ts-files": "find ./src -mindepth 1 -maxdepth 1 -name '*.d.ts' -exec cp {} ./dist-ts +",
-    "format-output-files": "eslint --config '.eslintrc.output.ts.cjs' --fix dist-ts && eslint --no-eslintrc --config '.eslintrc.output.cjs' --fix 'dist-cjs/*js' 'dist-mjs/*js'",
+    "format-output-files": "find dist-ts -name '*.ts' -type f -exec sh -c \"echo '/* eslint-disable */\n/* eslint-enable prettier/prettier */'\"' | cat - $1 > $1.tmp && mv $1.tmp $1' -- {} \\; && eslint --no-eslintrc --config '.eslintrc.output.ts.cjs' --fix './dist-ts/**/*.ts' && eslint --no-eslintrc --config '.eslintrc.output.cjs' --fix 'dist-cjs/*js' 'dist-mjs/*js'",
     "lint": "eslint ./src --ext .ts,.tsx",
     "rename-js-to-mjs": "find dist-mjs -name '*.js' -type f -exec sh -c 'for f in \"$@\"; do mv -- \"$f\" \"${f%.js}.mjs\"; done' -- {} +",
     "tsc": "tsc --project tsconfig.build.json",

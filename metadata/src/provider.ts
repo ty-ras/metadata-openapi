@@ -45,10 +45,10 @@ jsonSchemaPlugin.SupportedJSONSchemaFunctionality<
 
   const generateEncoderJSONSchema = (contentType: string, encoder: unknown) =>
     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
-    encoders[contentType as keyof TOutputContents](encoder as any);
+    encoders[contentType as keyof TOutputContents](encoder as any, true);
   const generateDecoderJSONSchema = (contentType: string, encoder: unknown) =>
     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
-    decoders[contentType as keyof TInputContents](encoder as any);
+    decoders[contentType as keyof TInputContents](encoder as any, true);
   const getAnyUndefinedPossibility = (decoderOrEncoder: unknown) =>
     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
     getUndefinedPossibility(decoderOrEncoder as any);
@@ -193,7 +193,7 @@ const getURLParameters = <TStringDecoder>(
       in: "path",
       required: true,
       schema: {
-        ...stringDecoder(urlParamSpec.decoder),
+        ...stringDecoder(urlParamSpec.decoder, true),
         pattern: urlParamSpec.regExp.source,
       },
     }));
@@ -249,7 +249,7 @@ const handleResponseHeaders = <TStringEncoder>(
         responseHeadersSpec,
         ({ required, encoder }): openapi.HeaderObject => ({
           required,
-          schema: stringEncoder(encoder),
+          schema: stringEncoder(encoder, true),
         }),
       );
     }
@@ -267,7 +267,7 @@ const getRequestHeaders = <TStringDecoder>(
       in: "header",
       name: headerName,
       required,
-      schema: stringDecoder(decoder),
+      schema: stringDecoder(decoder, true),
     }),
   );
 
@@ -282,7 +282,7 @@ const getQuery = <TStringDecoder>(
       in: "query",
       name: qParamName,
       required,
-      schema: stringDecoder(decoder),
+      schema: stringDecoder(decoder, true),
     }),
   );
 
