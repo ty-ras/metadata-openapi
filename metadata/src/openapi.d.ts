@@ -69,7 +69,7 @@ interface OpenAPIArgumentsOutput<TOutput> {
   };
 }
 
-export interface OpenAPIContextArgs {
+export interface OpenAPIEndpointStateInfo {
   securitySchemes: Array<{
     name: string;
     scheme: openapi.SecuritySchemeObject;
@@ -95,28 +95,13 @@ export type OpenAPIMetadataProvider<
   OpenAPIArguments,
   OpenAPIPathItemArg,
   OpenAPIEndpointMD,
-  OpenAPIContextArgs,
   TStringDecoder,
   TStringEncoder,
   TOutputContents,
   TInputContents,
+  OpenAPIEndpointStateInfo,
   openapi.InfoObject,
   FinalMetadata
->;
-
-export type OpenAPIMetadataBuilder<
-  TStringDecoder,
-  TStringEncoder,
-  TOutputContents extends data.TOutputContentsBase,
-  TInputContents extends data.TInputContentsBase,
-> = md.MetadataBuilder<
-  OpenAPIArguments,
-  OpenAPIPathItemArg,
-  OpenAPIEndpointMD,
-  TStringDecoder,
-  TStringEncoder,
-  TOutputContents,
-  TInputContents
 >;
 
 export type OpenAPIEndpointMD = PathsObjectInfo | undefined;
