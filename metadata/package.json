@@ -1,6 +1,6 @@
 {
   "name": "@ty-ras/metadata-openapi",
-  "version": "0.11.0",
+  "version": "0.11.1",
   "author": {
     "name": "Stanislav Muhametsin",
     "email": "346799+stazz@users.noreply.github.com",
@@ -31,7 +31,7 @@
     }
   },
   "dependencies": {
-    "@ty-ras/metadata": "0.11.0",
+    "@ty-ras/metadata": "0.11.1",
     "@ty-ras/metadata-jsonschema": "0.11.1"
   },
   "peerDependencies": {
@@ -52,7 +52,6 @@
     "eslint-plugin-sonarjs": "0.15.0",
     "openapi-types": "12.0.2",
     "prettier": "2.7.1",
-    "raw-body": "2.5.1",
     "ts-node": "10.9.1",
     "typescript": "4.8.3"
   },
