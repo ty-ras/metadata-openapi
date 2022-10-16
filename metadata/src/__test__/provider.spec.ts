@@ -17,7 +17,10 @@ test("Validate createOpenAPIProvider works for simplest usecase", (t) => {
   );
   t.deepEqual(
     provider.createFinalMetadata(docCreationArgs(), [
-      provider.getBuilder().getEndpointsMetadata({}, [], {})(""),
+      {
+        md: provider.getEndpointsMetadata({}, [], {})(""),
+        stateMD: {},
+      },
     ]),
     doc,
     "Calling final metadata creation method with empty method set should produce same result as final metadata creation call right away.",
@@ -28,7 +31,10 @@ test("Validate createOpenAPIProvider works for one simplest endpoint", (t) => {
   t.plan(1);
   const provider = createProvider();
   const doc = provider.createFinalMetadata(docCreationArgs(), [
-    provider.getBuilder().getEndpointsMetadata({}, [], getSimpleEndpoint())(""),
+    {
+      md: provider.getEndpointsMetadata({}, [], getSimpleEndpoint())(""),
+      stateMD: {},
+    },
   ]);
   t.deepEqual(doc, makeDoc(getSimpleEndpointOpenAPIPaths()));
 });
@@ -37,90 +43,93 @@ test("Validate createOpenAPIProvider works for one complex endpoint", (t) => {
   t.plan(1);
   const provider = createProvider();
   const doc = provider.createFinalMetadata(docCreationArgs(), [
-    provider.getBuilder().getEndpointsMetadata(
-      {
-        description: "Endpoint at some URL",
-        summary: "Will perform its task",
-      },
-      [
-        "/path/",
+    {
+      md: provider.getEndpointsMetadata(
         {
-          name: "parameter",
-          decoder: "url-parameter",
-          regExp: /.*/,
+          description: "Endpoint at some URL",
+          summary: "Will perform its task",
         },
-      ],
-      {
-        GET: {
-          requestHeadersSpec: {
-            headerParam: {
-              required: true,
-              decoder: "request-header-contents",
-            },
+        [
+          "/path/",
+          {
+            name: "parameter",
+            decoder: "url-parameter",
+            regExp: /.*/,
           },
-          querySpec: {
-            queryParam: {
-              required: true,
-              decoder: "query-contents",
-            },
-          },
-          inputSpec: {
-            contents: {
-              string: "request-body-contents",
-            },
-          },
-          outputSpec: {
-            contents: {
-              string: "response-body-contents",
-            },
-          },
-          responseHeadersSpec: {
-            responseHeaderParam: {
-              required: true,
-              encoder: "response-header-contents",
-            },
-          },
-          metadataArguments: {
-            urlParameters: {
-              parameter: {
-                description: "url-parameter-description",
-              },
-            },
-            requestHeaders: {
+        ],
+        {
+          GET: {
+            requestHeadersSpec: {
               headerParam: {
-                description: "request-header-description",
+                required: true,
+                decoder: "request-header-contents",
               },
             },
-            queryParameters: {
+            querySpec: {
               queryParam: {
-                description: "query-parameter-description",
+                required: true,
+                decoder: "query-contents",
               },
             },
-            body: {
-              string: {
-                example: "request-body-example",
+            inputSpec: {
+              contents: {
+                string: "request-body-contents",
               },
             },
-            output: {
-              description: "response-body-description",
-              mediaTypes: {
-                string: {
-                  example: "response-body-example",
+            outputSpec: {
+              contents: {
+                string: "response-body-contents",
+              },
+            },
+            responseHeadersSpec: {
+              responseHeaderParam: {
+                required: true,
+                encoder: "response-header-contents",
+              },
+            },
+            metadataArguments: {
+              urlParameters: {
+                parameter: {
+                  description: "url-parameter-description",
                 },
               },
-            },
-            responseHeaders: {
-              responseHeaderParam: {
-                description: "response-header-description",
+              requestHeaders: {
+                headerParam: {
+                  description: "request-header-description",
+                },
               },
-            },
-            operation: {
-              description: "operation-description",
+              queryParameters: {
+                queryParam: {
+                  description: "query-parameter-description",
+                },
+              },
+              body: {
+                string: {
+                  example: "request-body-example",
+                },
+              },
+              output: {
+                description: "response-body-description",
+                mediaTypes: {
+                  string: {
+                    example: "response-body-example",
+                  },
+                },
+              },
+              responseHeaders: {
+                responseHeaderParam: {
+                  description: "response-header-description",
+                },
+              },
+              operation: {
+                description: "operation-description",
+              },
             },
           },
         },
-      },
-    )("/prefix"),
+      )("/prefix"),
+      stateMD: {},
+    },
   ]);
   t.deepEqual(
     doc,
@@ -190,19 +199,22 @@ test("Validate createOpenAPIProvider passes security schemes to final result", (
     type: "http",
     scheme: "Basic",
   };
-  const provider = createProvider().withRefinedContext({
-    securitySchemes: [
-      {
-        name: "auth",
-        scheme,
-      },
-    ],
-  });
+  const provider = createProvider();
   t.deepEqual(
     provider.createFinalMetadata(docCreationArgs(), [
-      provider.getBuilder().getEndpointsMetadata({}, [], getSimpleEndpoint())(
-        "",
-      ),
+      {
+        md: provider.getEndpointsMetadata({}, [], getSimpleEndpoint())(""),
+        stateMD: {
+          GET: {
+            securitySchemes: [
+              {
+                name: "auth",
+                scheme,
+              },
+            ],
+          },
+        },
+      },
     ]),
     makeDoc(
       getSimpleEndpointOpenAPIPaths({
@@ -230,13 +242,14 @@ test("Validate createOpenAPIProvider checks for undefined possibility of respons
   const provider = createProvider();
   t.deepEqual(
     provider.createFinalMetadata(docCreationArgs(), [
-      provider
-        .getBuilder()
-        .getEndpointsMetadata(
+      {
+        md: provider.getEndpointsMetadata(
           {},
           [],
           getSimpleEndpoint("undefined"),
         )(""),
+        stateMD: {},
+      },
     ]),
     makeDoc(
       getSimpleEndpointOpenAPIPaths({

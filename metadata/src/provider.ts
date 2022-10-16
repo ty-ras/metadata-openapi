@@ -1,9 +1,9 @@
-import * as md from "@ty-ras/metadata";
+import type * as md from "@ty-ras/metadata";
 import * as data from "@ty-ras/data";
 import type * as dataBE from "@ty-ras/data-backend";
 import type * as jsonSchemaPlugin from "@ty-ras/metadata-jsonschema";
 
-import type { OpenAPIV3 as openapi } from "openapi-types";
+import { OpenAPIV3 as openapi } from "openapi-types";
 import * as types from "./openapi";
 
 // This provider is meant to be passed over to AppEndpointBuilder within @ty-ras/spec package, instead of using the methods directly.
@@ -39,10 +39,6 @@ jsonSchemaPlugin.SupportedJSONSchemaFunctionality<
   TOutputContents,
   TInputContents
 > => {
-  const initialContextArgs: types.OpenAPIContextArgs = {
-    securitySchemes: [],
-  };
-
   const generateEncoderJSONSchema = (contentType: string, encoder: unknown) =>
     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
     encoders[contentType as keyof TOutputContents](encoder as any, true);
@@ -52,55 +48,71 @@ jsonSchemaPlugin.SupportedJSONSchemaFunctionality<
   const getAnyUndefinedPossibility = (decoderOrEncoder: unknown) =>
     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
     getUndefinedPossibility(decoderOrEncoder as any);
-  return new md.InitialMetadataProviderClass(
-    initialContextArgs,
-    (context) => ({
-      getEndpointsMetadata: (pathItemBase, urlSpec, methods) => {
-        if (Object.keys(methods).length > 0) {
-          const pathObject: openapi.PathItemObject = { ...pathItemBase };
-          const urlParameters = getURLParameters(stringDecoder, urlSpec);
-          if (urlParameters.length > 0) {
-            // URL path parameters as common parameters for all operations under this URL path
-            pathObject.parameters = urlParameters;
-          }
-          for (const [method, epInfo] of Object.entries(methods)) {
-            if (epInfo) {
-              pathObject[
-                method.toLowerCase() as Lowercase<openapi.HttpMethods>
-              ] = getOperationObject(
+  return {
+    getEndpointsMetadata: (pathItemBase, urlSpec, methods) => {
+      if (Object.keys(methods).length > 0) {
+        const pathObject: openapi.PathItemObject = { ...pathItemBase };
+        const urlParameters = getURLParameters(stringDecoder, urlSpec);
+        if (urlParameters.length > 0) {
+          // URL path parameters as common parameters for all operations under this URL path
+          pathObject.parameters = urlParameters;
+        }
+        for (const [method, epInfo] of Object.entries(methods)) {
+          if (epInfo) {
+            pathObject[method.toLowerCase() as Lowercase<openapi.HttpMethods>] =
+              getOperationObject(
                 getAnyUndefinedPossibility,
                 generateDecoderJSONSchema,
                 generateEncoderJSONSchema,
                 stringDecoder,
                 stringEncoder,
-                context,
                 epInfo,
               );
-            }
           }
-          const urlString = getUrlPathString(urlSpec);
-          return (urlPrefix) => ({
-            urlPath: `${urlPrefix}${urlString}`,
-            pathObject,
-          });
-        } else {
-          return () => undefined;
         }
-      },
-    }),
-    ({ securitySchemes }, info, paths) => {
+        const urlString = getUrlPathString(urlSpec);
+        return (urlPrefix) => ({
+          urlPath: `${urlPrefix}${urlString}`,
+          pathObject,
+        });
+      } else {
+        return () => undefined;
+      }
+    },
+    createFinalMetadata: (info, paths) => {
       const components: openapi.ComponentsObject = {};
       // TODO aggressively cache all cacheable things to components
-      if (securitySchemes.length > 0) {
-        components.securitySchemes = Object.fromEntries(
-          securitySchemes.map(({ name, scheme }) => [name, scheme]),
-        );
+      const securitySchemes: Record<string, openapi.SecuritySchemeObject> = {};
+      paths.forEach(({ md, stateMD }) => {
+        if (md) {
+          Object.values(openapi.HttpMethods).forEach((method) => {
+            const operation = md.pathObject[method];
+            if (operation) {
+              const operationMD =
+                stateMD[method.toUpperCase() as keyof typeof stateMD];
+              if (operationMD) {
+                operation.security = operationMD.securitySchemes.map(
+                  ({ name }) => ({
+                    [name]: [],
+                  }),
+                );
+                operationMD.securitySchemes.forEach(
+                  ({ name, scheme }) => (securitySchemes[name] = scheme),
+                );
+              }
+            }
+          });
+        }
+      });
+      if (Object.keys(securitySchemes).length > 0) {
+        components.securitySchemes = securitySchemes;
       }
       const doc: openapi.Document = {
         openapi: "3.0.3",
         info,
         paths: Object.fromEntries(
           paths
+            .map(({ md }) => md)
             .filter((info): info is types.PathsObjectInfo => !!info)
             .map(({ urlPath, pathObject }) => [urlPath, pathObject]),
         ),
@@ -110,7 +122,7 @@ jsonSchemaPlugin.SupportedJSONSchemaFunctionality<
       }
       return doc;
     },
-  );
+  };
 };
 
 const getOperationObject = <
@@ -124,7 +136,6 @@ const getOperationObject = <
   generateEncoderJSONSchema: GenerateAnyJSONSchema,
   stringDecoder: StringDecoderOrEncoder<TStringDecoder>,
   stringEncoder: StringDecoderOrEncoder<TStringEncoder>,
-  { securitySchemes }: types.OpenAPIContextArgs,
   endpointInfo: md.EndpointMetadataInformation<
     types.OpenAPIArguments,
     TStringDecoder,
@@ -153,11 +164,6 @@ const getOperationObject = <
     ...metadataArguments.operation,
     responses: responseObjects,
   };
-  if (securitySchemes.length > 0) {
-    operationObject.security = securitySchemes.map(({ name }) => ({
-      [name]: [],
-    }));
-  }
   // Request headers
   parameters.push(...getRequestHeaders(stringDecoder, requestHeadersSpec));
   // Query parameters
