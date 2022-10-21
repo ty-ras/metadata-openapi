@@ -72,18 +72,19 @@ const removeOperations = (
 const removeSecuritySchemes = (doc: openapi.Document): openapi.Document => {
   // eslint-disable-next-line prefer-const
   let { components, ...remaining } = doc;
-  if (components) {
-    if ("securitySchemes" in components) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { securitySchemes, ...otherComponents } = components;
-      if (Object.keys(otherComponents).length > 0) {
-        components = otherComponents;
-      } else {
-        components = undefined;
-      }
+  if (components && "securitySchemes" in components) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { securitySchemes, ...otherComponents } = components;
+    if (Object.keys(otherComponents).length > 0) {
+      components = otherComponents;
     } else {
-      components = undefined;
+      components = {};
+    }
+    if (Object.keys(components).length === 0) {
+      doc = remaining;
+    } else {
+      doc = { ...remaining, components };
     }
   }
-  return components ? { ...remaining, components } : doc;
+  return doc;
 };

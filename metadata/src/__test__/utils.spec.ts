@@ -45,9 +45,9 @@ test("Validate removeAuthenticatedOperations returns same object if all endpoint
       securitySchemes: {},
     },
   };
-  c.is(
+  c.deepEqual(
     spec.removeAuthenticatedOperations(docWithComponentEmptySecuritySchemes),
-    docWithComponentEmptySecuritySchemes,
+    doc,
   );
   const docWithOperations: openapi.Document = {
     ...common,
@@ -95,6 +95,14 @@ test("Validate removeAuthenticatedOperations removes only authenticated operatio
         post: {
           responses: {},
           security: [],
+        },
+      },
+    },
+    components: {
+      securitySchemes: {
+        auth: {
+          type: "http",
+          scheme: "bearer",
         },
       },
     },

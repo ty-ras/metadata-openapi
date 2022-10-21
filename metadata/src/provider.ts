@@ -90,7 +90,7 @@ jsonSchemaPlugin.SupportedJSONSchemaFunctionality<
             if (operation) {
               const operationMD =
                 stateMD[method.toUpperCase() as keyof typeof stateMD];
-              if (operationMD) {
+              if (operationMD && operationMD.securitySchemes.length > 0) {
                 operation.security = operationMD.securitySchemes.map(
                   ({ name }) => ({
                     [name]: [],
