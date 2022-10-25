@@ -23,45 +23,45 @@ export interface OpenAPIArguments extends md.HKTArg {
     OpenAPIArgumentsOutput<this["_TOutput"]>;
 }
 
-type OpenAPIArgumentsStatic = {
+export type OpenAPIArgumentsStatic = {
   operation: Omit<
     openapi.OperationObject,
     "parameters" | "requestBody" | "responses" | "security"
   >;
 };
 
-type OpenAPIParameterInput = Pick<
+export type OpenAPIParameterInput = Pick<
   openapi.ParameterObject,
   "description" | "deprecated"
 >;
 
-interface OpenAPIParameterMedia<T> {
+export interface OpenAPIParameterMedia<T> {
   example?: T;
 }
 
-interface OpenAPIArgumentsURLData<TURLData> {
+export interface OpenAPIArgumentsURLData<TURLData> {
   urlParameters: { [P in keyof TURLData]-?: OpenAPIParameterInput };
 }
 
-interface OpenAPIArgumentsRequestHeaders<TResponseHeaders> {
+export interface OpenAPIArgumentsRequestHeaders<TResponseHeaders> {
   requestHeaders: { [P in keyof TResponseHeaders]-?: OpenAPIParameterInput };
 }
 
-interface OpenAPIArgumentsResponseHeaders<TResponseHeaders> {
+export interface OpenAPIArgumentsResponseHeaders<TResponseHeaders> {
   responseHeaders: { [P in keyof TResponseHeaders]-?: OpenAPIParameterInput };
 }
 
-interface OpenAPIArgumentsQuery<TQuery> {
+export interface OpenAPIArgumentsQuery<TQuery> {
   queryParameters: {
     [P in keyof TQuery]-?: OpenAPIParameterInput;
   };
 }
 
-interface OpenAPIArgumentsInput<TBody> {
+export interface OpenAPIArgumentsInput<TBody> {
   body: { [P in keyof TBody]-?: OpenAPIParameterMedia<TBody[P]> };
 }
 
-interface OpenAPIArgumentsOutput<TOutput> {
+export interface OpenAPIArgumentsOutput<TOutput> {
   output: Pick<openapi.ResponseObject, "description"> & {
     mediaTypes: {
       [P in keyof TOutput]: OpenAPIParameterMedia<TOutput[P]>;
