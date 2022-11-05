@@ -383,10 +383,10 @@
   dependencies:
     "@ty-ras/data-backend" "0.12.4"
 
-"@ty-ras/metadata-jsonschema@0.12.2":
-  version "0.12.2"
-  resolved "https://registry.yarnpkg.com/@ty-ras/metadata-jsonschema/-/metadata-jsonschema-0.12.2.tgz#b2527f1361a7fe42142afb183a240546a8bfe273"
-  integrity sha512-TTzN3RhgpImD//1K/YOrmcXUAdTwzQgQcHyCrV9LrTKwKGHKpSre8GeyaEaJ77Ufs9X6xSXE7yBLaUR0kH+7Xg==
+"@ty-ras/metadata-jsonschema@0.12.3":
+  version "0.12.3"
+  resolved "https://registry.yarnpkg.com/@ty-ras/metadata-jsonschema/-/metadata-jsonschema-0.12.3.tgz#f950fe7c21e16d4e01924743f92805b01da73103"
+  integrity sha512-IsR4+5I17J8MdY/F/CCDiWAj9octazXn8vA7quMONIUk4rlzGQ4B5bsN+YrfC2XfpuXqEfYUrIh83MmP0A115w==
 
 "@ty-ras/metadata@0.12.5":
   version "0.12.5"
