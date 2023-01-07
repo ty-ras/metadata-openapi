@@ -131,7 +131,7 @@ const getOperationObject = <
   TOutputContents extends dataBE.TOutputContentsBase,
   TInputContents extends dataBE.TInputContentsBase,
 >(
-  getUndefinedPossibility: GetUndefinedPossibility<unknown>,
+  getUndefinedPossibility: jsonSchemaPlugin.GetUndefinedPossibility<unknown>,
   generateDecoderJSONSchema: GenerateAnyJSONSchema,
   generateEncoderJSONSchema: GenerateAnyJSONSchema,
   stringDecoder: StringDecoderOrEncoder<TStringDecoder>,
@@ -205,7 +205,7 @@ const getURLParameters = <TStringDecoder>(
     }));
 
 const getResponseBody = (
-  getUndefinedPossibility: GetUndefinedPossibility<unknown>,
+  getUndefinedPossibility: jsonSchemaPlugin.GetUndefinedPossibility<unknown>,
   generateJSONSchema: GenerateAnyJSONSchema,
   outputSpec: dataBE.DataValidatorResponseOutputValidatorSpec<dataBE.TOutputContentsBase>,
   output: types.OpenAPIArgumentsOutput<unknown>["output"],
@@ -215,10 +215,11 @@ const getResponseBody = (
   const response200Entries: ContentTypeDecodersOrEncoders = [];
   for (const [contentType, contentOutput] of contentEntries) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
-    if (getUndefinedPossibility(contentOutput as any)) {
-      // TODO - we probably can have both 204 and 200 possibilities...?
+    const undefinedPossibility = getUndefinedPossibility(contentOutput as any);
+    if (undefinedPossibility !== false) {
       hasResponse204 = true;
-    } else {
+    }
+    if (undefinedPossibility !== true) {
       response200Entries.push([contentType, contentOutput]);
     }
   }
@@ -293,7 +294,7 @@ const getQuery = <TStringDecoder>(
   );
 
 const getRequestBody = (
-  getUndefinedPossibility: GetUndefinedPossibility<unknown>,
+  getUndefinedPossibility: jsonSchemaPlugin.GetUndefinedPossibility<unknown>,
   generateJSONSchema: GenerateAnyJSONSchema,
   inputSpec:
     | dataBE.DataValidatorResponseInputValidatorSpec<dataBE.TInputContentsBase>
@@ -304,9 +305,10 @@ const getRequestBody = (
   if (inputSpec) {
     const inputEntries = Object.entries(inputSpec.contents);
     requestBody = {
-      required: !inputEntries.some(([, contentInput]) =>
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
-        getUndefinedPossibility(contentInput as any),
+      required: !inputEntries.some(
+        ([, contentInput]) =>
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
+          getUndefinedPossibility(contentInput as any) !== false,
       ),
       content: getContentMap(inputEntries, body, generateJSONSchema),
     };
@@ -360,10 +362,6 @@ type GenerateAnyJSONSchema = (
   ...entry: ContentTypeDecodersOrEncoders[number]
 ) => openapi.SchemaObject | undefined;
 
-// TODO this should really be in metadata-jsonschema library
-type GetUndefinedPossibility<TDecoderOrEncoder> = (
-  encoderOrDecoder: TDecoderOrEncoder,
-) => boolean;
 type StringDecoderOrEncoder<TStringTransformer> = jsonSchemaPlugin.Transformer<
   TStringTransformer,
   openapi.SchemaObject

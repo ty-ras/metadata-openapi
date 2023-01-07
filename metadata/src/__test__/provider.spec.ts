@@ -259,6 +259,34 @@ test("Validate createOpenAPIProvider checks for undefined possibility of respons
   );
 });
 
+test("Validate createOpenAPIProvider understands also potentially undefined response body", (t) => {
+  t.plan(1);
+  const provider = createProvider();
+  const paths = getSimpleEndpointOpenAPIPaths({
+    is204: true,
+  });
+  const responses = paths[""]?.get?.responses ?? {};
+  if (!responses[204]) {
+    t.fail("Expected 204 response to be present.");
+  } else if (responses[200]) {
+    t.fail("Did not expect 200 response to be present.");
+  }
+  responses[200] = getResponseFor200("maybeUndefined");
+  t.deepEqual(
+    provider.createFinalMetadata(docCreationArgs(), [
+      {
+        md: provider.getEndpointsMetadata(
+          {},
+          [],
+          getSimpleEndpoint("maybeUndefined"),
+        )(""),
+        stateMD: {},
+      },
+    ]),
+    makeDoc(paths),
+  );
+});
+
 const makeConst = (val: string): openapi.SchemaObject => ({
   enum: [val],
 });
@@ -273,7 +301,11 @@ const createProvider = () =>
     { string: string }
   >({
     getUndefinedPossibility: (decoderOrEncoder) =>
-      decoderOrEncoder === "undefined",
+      decoderOrEncoder === "undefined"
+        ? true
+        : decoderOrEncoder === "maybeUndefined"
+        ? undefined
+        : false,
     stringDecoder: (decoder) => makeConst(decoder),
     stringEncoder: (encoder) => makeConst(encoder),
     decoders: {
@@ -352,21 +384,27 @@ const getSimpleEndpointOpenAPIPaths = (info?: {
         ...(info?.operation ?? {}),
         responses: {
           [is204 ? 204 : 200]: {
-            description: "outputDescription",
+            description,
           },
         },
       },
     },
   };
   if (!is204) {
-    (retVal as any)[""].get.responses[200].content = {
-      string: {
-        example: "ExampleOutput",
-        schema: {
-          enum: ["validator-as-a-string"],
-        },
-      },
-    };
+    (retVal as any)[""].get.responses[200] = getResponseFor200();
   }
   return retVal;
 };
+
+const description = "outputDescription";
+const getResponseFor200 = (enumValue?: string): openapi.ResponseObject => ({
+  description,
+  content: {
+    string: {
+      example: "ExampleOutput",
+      schema: {
+        enum: [enumValue ?? "validator-as-a-string"],
+      },
+    },
+  },
+});

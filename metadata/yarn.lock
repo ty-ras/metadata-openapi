@@ -376,10 +376,10 @@
   resolved "https://registry.yarnpkg.com/@ty-ras/data/-/data-0.13.0.tgz#45acb046958350de01916f2cb433ec9da165abef"
   integrity sha512-AZYCdMiBPTO4+V0Apg+i9XUo17c4C5Up+0O8Jk8cBYVCm/4W5kbzGdcE40GKNFqkn71IVrfjv5GAaMpg5EbFXg==
 
-"@ty-ras/metadata-jsonschema@0.13.0":
-  version "0.13.0"
-  resolved "https://registry.yarnpkg.com/@ty-ras/metadata-jsonschema/-/metadata-jsonschema-0.13.0.tgz#7e67fca359f6a9bfcc5e26927bd6d8f5a2d13c6b"
-  integrity sha512-W5cC/+bGT701irTakR4AkSshtnGBPPqAWfGmsoimwE67YjjAV55yI6oY/qkjvsNOV4pSmVqGLyJ2e0f5IcYsYg==
+"@ty-ras/metadata-jsonschema@0.13.1":
+  version "0.13.1"
+  resolved "https://registry.yarnpkg.com/@ty-ras/metadata-jsonschema/-/metadata-jsonschema-0.13.1.tgz#8d7384cd6c98dcf7a122b62d44e80cc8a5d1d27e"
+  integrity sha512-RIf3byzepCdHphXQFJViDsMNMgCANV+nJ+Ua9f5TizZ2fh3UqIbixmDqydp6HfSH8XGUlQTh8I9Nd6c/Qjlaeg==
 
 "@ty-ras/metadata@0.13.0":
   version "0.13.0"
