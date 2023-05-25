@@ -1,8 +1,17 @@
+/**
+ * @file This file contains function to convert fully-fledged JSON schema 7 values into the ones supported by OpenAPI.
+ */
+
 import type * as jsonSchema from "json-schema";
 import type * as jsonSchemaPlugin from "@ty-ras/metadata-jsonschema";
 import type { OpenAPIV3 as openapi } from "openapi-types";
 
-// OpenAPI doesn't support full shape of JSON7 schemas so we must convert unsupported ones first.
+/**
+ * This function will convert the JSON schema 7 value into the one supported by OpenAPI.
+ * Most notably, the `boolean` values as schema objects are not supported by OpenAPI.
+ * @param schema The {@link jsonSchema.JSONSchema7Definition} to convert.
+ * @returns The JSON schema suitable for OpenAPI as {@link openapi.SchemaObject}.
+ */
 export const convertToOpenAPISchemaObject = (
   schema: jsonSchema.JSONSchema7Definition,
 ): openapi.SchemaObject =>
@@ -71,7 +80,9 @@ const handleSchemaRecord = <
     : Object.entries(record).reduce((newRecord, [key, val]) => {
         newRecord[key] =
           val !== undefined && !Array.isArray(val)
-            ? (convertBooleanSchemasToObjects(val) as typeof newRecord[string])
+            ? (convertBooleanSchemasToObjects(
+                val,
+              ) as (typeof newRecord)[string])
             : val;
         return newRecord;
       }, {} as typeof record);

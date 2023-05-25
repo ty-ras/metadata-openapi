@@ -1,10 +1,14 @@
+/**
+ * @file This file contains unit tests for functionality in file `../provider.ts`.
+ */
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import test from "ava";
 import * as spec from "../provider";
 import type { OpenAPIV3 as openapi } from "openapi-types";
 import type * as md from "@ty-ras/metadata";
-import type * as openapiMd from "../openapi";
+import type * as openapiMd from "../openapi.types";
 
 test("Validate createOpenAPIProvider works for simplest usecase", (t) => {
   t.plan(2);
@@ -53,8 +57,10 @@ test("Validate createOpenAPIProvider works for one complex endpoint", (t) => {
           "/path/",
           {
             name: "parameter",
-            decoder: "url-parameter",
-            regExp: /.*/,
+            spec: {
+              decoder: "url-parameter",
+              regExp: /.*/,
+            },
           },
         ],
         {
@@ -103,12 +109,12 @@ test("Validate createOpenAPIProvider works for one complex endpoint", (t) => {
                   description: "query-parameter-description",
                 },
               },
-              body: {
+              requestBody: {
                 string: {
                   example: "request-body-example",
                 },
               },
-              output: {
+              responseBody: {
                 description: "response-body-description",
                 mediaTypes: {
                   string: {
@@ -294,7 +300,7 @@ const makeConst = (val: string): openapi.SchemaObject => ({
 // In unit tests, our decoders and encoders are just strings
 // In reality they will be data validators from io-ts/runtypes/zod libraries.
 const createProvider = () =>
-  spec.createOpenAPIProvider<
+  spec.createOpenAPIProviderGeneric<
     string,
     string,
     { string: string },
@@ -356,7 +362,7 @@ const getSimpleEndpoint = (
     inputSpec: undefined,
     metadataArguments: {
       urlParameters: {},
-      output: {
+      responseBody: {
         description: "outputDescription",
         mediaTypes: {
           string: {
@@ -367,7 +373,7 @@ const getSimpleEndpoint = (
       responseHeaders: {},
       requestHeaders: {},
       queryParameters: {},
-      body: {},
+      requestBody: {},
       operation: {},
     },
   },
