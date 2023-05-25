@@ -1,3 +1,7 @@
+/**
+ * @file This file contains unit tests for functionality in file `../utils.ts`.
+ */
+
 import test from "ava";
 import * as spec from "../utils";
 import type { OpenAPIV3 as openapi } from "openapi-types";

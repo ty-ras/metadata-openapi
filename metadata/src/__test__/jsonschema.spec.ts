@@ -1,3 +1,7 @@
+/**
+ * @file This file contains unit tests for functionality in file `../jsonschema.ts`.
+ */
+
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import test from "ava";
 import * as spec from "../jsonschema";

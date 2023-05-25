@@ -1,13 +1,27 @@
-import type * as md from "@ty-ras/metadata";
+/**
+ * @file This file contains function to create {@link types.OpenAPIMetadataProvider} which will be able to generate OpenAPI {@link openapi.Document} containing schema and other information from TyRAS endpoints.
+ */
+
 import * as data from "@ty-ras/data";
+import type * as md from "@ty-ras/metadata";
 import type * as dataBE from "@ty-ras/data-backend";
 import type * as jsonSchemaPlugin from "@ty-ras/metadata-jsonschema";
 
 import { OpenAPIV3 as openapi } from "openapi-types";
-import * as types from "./openapi";
+import type * as types from "./openapi.types";
 
-// This provider is meant to be passed over to AppEndpointBuilder within @ty-ras/spec package, instead of using the methods directly.
-export const createOpenAPIProvider = <
+/**
+ * Creates a new instance of {@link types.OpenAPIMetadataProvider} with necesary information about how to convert native data validators into JSON schemas.
+ * This is meant to be used by other TyRAS libraries and not by client code directly.
+ * @param param0 The {@link jsonSchemaPlugin.SupportedJSONSchemaFunctionality} with necessary information about how to convert native data validators into JSON schemas.
+ * @param param0.stringDecoder Privately deconstructed variable.
+ * @param param0.stringEncoder Privately deconstructed variable.
+ * @param param0.encoders Privately deconstructed variable.
+ * @param param0.decoders Privately deconstructed variable.
+ * @param param0.getUndefinedPossibility Privately deconstructed variable.
+ * @returns A new instance of {@link types.OpenAPIMetadataProvider} which can be plugged in into result of e.g. `
+ */
+export const createOpenAPIProviderGeneric = <
   TStringDecoder,
   TStringEncoder,
   TOutputContents extends dataBE.TOutputContentsBase,
@@ -157,7 +171,7 @@ const getOperationObject = <
     getUndefinedPossibility,
     generateEncoderJSONSchema,
     outputSpec,
-    metadataArguments.output,
+    metadataArguments.responseBody,
   );
   handleResponseHeaders(stringEncoder, responseHeadersSpec, responseObjects);
   const operationObject: openapi.OperationObject = {
@@ -177,7 +191,7 @@ const getOperationObject = <
     getUndefinedPossibility,
     generateDecoderJSONSchema,
     inputSpec,
-    metadataArguments.body,
+    metadataArguments.requestBody,
   );
   if (requestBody) {
     operationObject.requestBody = requestBody;
@@ -194,7 +208,7 @@ const getURLParameters = <TStringDecoder>(
     .filter(
       (s): s is md.URLParameterSpec<TStringDecoder> => typeof s !== "string",
     )
-    .map(({ name, ...urlParamSpec }) => ({
+    .map(({ name, spec: urlParamSpec }) => ({
       name: name,
       in: "path",
       required: true,
@@ -208,7 +222,7 @@ const getResponseBody = (
   getUndefinedPossibility: jsonSchemaPlugin.GetUndefinedPossibility<unknown>,
   generateJSONSchema: GenerateAnyJSONSchema,
   outputSpec: dataBE.DataValidatorResponseOutputValidatorSpec<dataBE.TOutputContentsBase>,
-  output: types.OpenAPIArgumentsOutput<unknown>["output"],
+  output: types.OpenAPIArgumentsResponseBody<unknown>["responseBody"],
 ): Record<string, openapi.ResponseObject> => {
   const contentEntries = Object.entries(outputSpec.contents);
   let hasResponse204 = false;
@@ -299,7 +313,7 @@ const getRequestBody = (
   inputSpec:
     | dataBE.DataValidatorResponseInputValidatorSpec<dataBE.TInputContentsBase>
     | undefined,
-  body: types.OpenAPIArgumentsInput<unknown>["body"],
+  body: types.OpenAPIArgumentsRequestBody<unknown>["requestBody"],
 ) => {
   let requestBody: openapi.RequestBodyObject | undefined;
   if (inputSpec) {

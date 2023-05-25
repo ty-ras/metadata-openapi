@@ -1,5 +1,15 @@
+/**
+ * @file This file contains various utility methods related to OpenAPI types.
+ */
+
 import { OpenAPIV3 as openapi } from "openapi-types";
 
+/**
+ * Helper function to remove all authenticated {@link openapi.OperationObject}s from given {@link openapi.Document}.
+ * A single {@link openapi.OperationObject} is deemed to have authenticated when its `security` property has at least one element.
+ * @param metadata The {@link openapi.Document} to search for authenticated operations.
+ * @returns A new {@link openapi.Document} containing only operations which are not deemed to be authenticated. If no such operations are left, returns `undefined`.
+ */
 export const removeAuthenticatedOperations = (
   metadata: openapi.Document,
 ): openapi.Document | undefined => {
@@ -25,6 +35,13 @@ export const removeAuthenticatedOperations = (
     : removeSecuritySchemes(metadata);
 };
 
+// eslint-disable-next-line jsdoc/require-yields
+/**
+ * Function to iterate {@link openapi.PathsObject}s within given {@link openapi.Document} which end up with at least one suitable {@link openapi.OperationObject} after applying given callback to all of the operation objects of that path object.
+ * @param metadata The {@link openapi.Document} to filter operations from.
+ * @param filter The callback invoked for every encountered {@link openapi.OperationObject}. If returns `true`, then operation will be filtered out from {@link openapi.PathsObject} containing it.
+ * @returns Yields the tuples: the key of {@link openapi.PathsObject}, then object containing the path object if it contains at least one suitable {@link openapi.OperationObject}, and information whether any operations were removed.
+ */
 export function* removeOperationsMatchingFilter(
   metadata: openapi.Document,
   filter: (op: openapi.OperationObject) => boolean,

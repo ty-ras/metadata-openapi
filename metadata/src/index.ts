@@ -1,24 +1,8 @@
-// Really waiting for that "export type *": https://github.com/microsoft/TypeScript/issues/37238
-// If we just do "export * from", our index.[m]js file ends up with "export" statement as well, thus causing runtime errors.
-// Another option is rename .d.ts files into .ts files and end up with a bunch of empty .[m]js files and index.[m]js exporting those - not very optimal either.export * from "./headers";
-export type {
-  FinalMetadata,
-  OpenAPIEndpointMD,
-  OpenAPIEndpointStateInfo,
-  OpenAPIArguments,
-  OpenAPIArgumentsInput,
-  OpenAPIArgumentsOutput,
-  OpenAPIArgumentsQuery,
-  OpenAPIArgumentsRequestHeaders,
-  OpenAPIArgumentsResponseHeaders,
-  OpenAPIArgumentsStatic,
-  OpenAPIArgumentsURLData,
-  OpenAPIMetadataProvider,
-  OpenAPIParameterInput,
-  OpenAPIParameterMedia,
-  OpenAPIPathItemArg,
-  PathsObjectInfo,
-} from "./openapi";
+/**
+ * @file This is entrypoint file for this package, exporting all non-internal files.
+ */
+
+export type * from "./openapi.types";
 export * from "./provider";
 export * from "./jsonschema";
 export * from "./utils";
