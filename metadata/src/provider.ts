@@ -266,9 +266,9 @@ const getOperationObject = <
 
   if (hasRequestHeaders || hasQueryParameters || hasURLParameters) {
     const conditionString = Object.entries({
-      URL: hasURLParameters,
+      ["URL path parameters"]: hasURLParameters,
       query: hasQueryParameters,
-      [`request headers`]: hasRequestHeaders,
+      ["request headers"]: hasRequestHeaders,
     })
       .filter(([, val]) => val)
       .map(([name]) => name)
