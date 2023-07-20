@@ -1,14 +1,14 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 /**
  * @file This file contains unit tests for functionality in file `../provider.ts`.
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import test from "ava";
 import * as spec from "../provider";
 import type { OpenAPIV3 as openapi } from "openapi-types";
 import type * as md from "@ty-ras/metadata";
-import type * as openapiMd from "../openapi.types";
+
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access */
 
 test("Validate createOpenAPIProvider works for simplest usecase", (t) => {
   t.plan(2);
@@ -22,8 +22,9 @@ test("Validate createOpenAPIProvider works for simplest usecase", (t) => {
   t.deepEqual(
     provider.createFinalMetadata(docCreationArgs(), [
       {
-        md: provider.getEndpointsMetadata({}, [], {})(""),
-        stateMD: {},
+        pathItem: {},
+        pattern: "",
+        securitySchemes: {},
       },
     ]),
     doc,
@@ -35,10 +36,9 @@ test("Validate createOpenAPIProvider works for one simplest endpoint", (t) => {
   t.plan(1);
   const provider = createProvider();
   const doc = provider.createFinalMetadata(docCreationArgs(), [
-    {
-      md: provider.getEndpointsMetadata({}, [], getSimpleEndpoint())(""),
-      stateMD: {},
-    },
+    provider.afterDefiningURLEndpoints({}, [], {
+      GET: getSimpleEndpoint(),
+    }),
   ]);
   t.deepEqual(doc, makeDoc(getSimpleEndpointOpenAPIPaths()));
 });
@@ -48,7 +48,7 @@ test("Validate createOpenAPIProvider works for one complex endpoint", (t) => {
   const provider = createProvider();
   const doc = provider.createFinalMetadata(docCreationArgs(), [
     {
-      md: provider.getEndpointsMetadata(
+      md: provider.afterDefiningURLEndpoints(
         {
           description: "Endpoint at some URL",
           summary: "Will perform its task",
@@ -209,7 +209,7 @@ test("Validate createOpenAPIProvider passes security schemes to final result", (
   t.deepEqual(
     provider.createFinalMetadata(docCreationArgs(), [
       {
-        md: provider.getEndpointsMetadata({}, [], getSimpleEndpoint())(""),
+        md: provider.afterDefiningURLEndpoints({}, [], getSimpleEndpoint())(""),
         stateMD: {
           GET: {
             securitySchemes: [
@@ -249,7 +249,7 @@ test("Validate createOpenAPIProvider checks for undefined possibility of respons
   t.deepEqual(
     provider.createFinalMetadata(docCreationArgs(), [
       {
-        md: provider.getEndpointsMetadata(
+        md: provider.afterDefiningURLEndpoints(
           {},
           [],
           getSimpleEndpoint("undefined"),
@@ -281,7 +281,7 @@ test("Validate createOpenAPIProvider understands also potentially undefined resp
   t.deepEqual(
     provider.createFinalMetadata(docCreationArgs(), [
       {
-        md: provider.getEndpointsMetadata(
+        md: provider.afterDefiningURLEndpoints(
           {},
           [],
           getSimpleEndpoint("maybeUndefined"),

@@ -2,133 +2,127 @@
  * @file This file contains function to create {@link types.OpenAPIMetadataProvider} which will be able to generate OpenAPI {@link openapi.Document} containing schema and other information from TyRAS endpoints.
  */
 
+import type * as protocol from "@ty-ras/protocol";
 import * as data from "@ty-ras/data";
 import type * as md from "@ty-ras/metadata";
 import type * as dataBE from "@ty-ras/data-backend";
+import type * as ep from "@ty-ras/endpoint";
 import type * as jsonSchemaPlugin from "@ty-ras/metadata-jsonschema";
 
 import { OpenAPIV3 as openapi } from "openapi-types";
-import type * as types from "./openapi.types";
+import type * as types from "./hkt.types";
 
 /**
  * Creates a new instance of {@link types.OpenAPIMetadataProvider} with necesary information about how to convert native data validators into JSON schemas.
  * This is meant to be used by other TyRAS libraries and not by client code directly.
- * @param param0 The {@link jsonSchemaPlugin.SupportedJSONSchemaFunctionality} with necessary information about how to convert native data validators into JSON schemas.
- * @param param0.stringDecoder Privately deconstructed variable.
- * @param param0.stringEncoder Privately deconstructed variable.
- * @param param0.encoders Privately deconstructed variable.
- * @param param0.decoders Privately deconstructed variable.
- * @param param0.getUndefinedPossibility Privately deconstructed variable.
- * @returns A new instance of {@link types.OpenAPIMetadataProvider} which can be plugged in into result of e.g. `
+ * @param getSecurityObjects Callback to get security object information from state specification.
+ * @param root0 The {@link jsonSchemaPlugin.SupportedJSONSchemaFunctionality} with necessary information about how to convert native data validators into JSON schemas.
+ * @param root0.stringDecoder Privately deconstructed variable.
+ * @param root0.stringEncoder Privately deconstructed variable.
+ * @param root0.encoders Privately deconstructed variable.
+ * @param root0.decoders Privately deconstructed variable.
+ * @param root0.getUndefinedPossibility Privately deconstructed variable.
+ * @returns A new instance of {@link types.OpenAPIMetadataProvider}.
  */
 export const createOpenAPIProviderGeneric = <
-  TStringDecoder,
-  TStringEncoder,
-  TOutputContents extends dataBE.TOutputContentsBase,
-  TInputContents extends dataBE.TInputContentsBase,
->({
-  stringDecoder,
-  stringEncoder,
-  encoders,
-  decoders,
-  getUndefinedPossibility,
-}: // Notice that if we encapsulate this as separate type (e.g. OpenAPIJSONSchemaGenerationSupport), the usecase of passing it to AppEndpointBuilder will start requiring specifying generic arguments for this method!
-jsonSchemaPlugin.SupportedJSONSchemaFunctionality<
-  openapi.SchemaObject,
-  TStringDecoder,
-  TStringEncoder,
+  TProtocolEncodedHKT extends protocol.EncodedHKTBase,
+  TValidatorHKT extends data.ValidatorHKTBase,
+  TStateHKT extends dataBE.StateHKTBase,
+  TRequestBodyContentTypes extends string,
+  TResponseBodyContentTypes extends string,
+>(
+  getSecurityObjects: GetOperationSecurityInformation<TStateHKT>,
   {
-    [P in keyof TOutputContents]: jsonSchemaPlugin.SchemaTransformation<
-      TOutputContents[P]
-    >;
-  },
-  {
-    [P in keyof TInputContents]: jsonSchemaPlugin.SchemaTransformation<
-      TInputContents[P]
-    >;
-  }
->): types.OpenAPIMetadataProvider<
-  TStringDecoder,
-  TStringEncoder,
-  TOutputContents,
-  TInputContents
+    stringDecoder,
+    stringEncoder,
+    encoders,
+    decoders,
+    getUndefinedPossibility,
+  }: jsonSchemaPlugin.SupportedJSONSchemaFunctionality<
+    openapi.SchemaObject,
+    TValidatorHKT,
+    TRequestBodyContentTypes,
+    TResponseBodyContentTypes
+  >,
+): md.MetadataProvider<
+  TProtocolEncodedHKT,
+  TValidatorHKT,
+  TStateHKT,
+  types.MetadataProviderHKT
 > => {
   const generateEncoderJSONSchema = (contentType: string, encoder: unknown) =>
     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
-    encoders[contentType as keyof TOutputContents](encoder as any, true);
+    encoders[contentType as TResponseBodyContentTypes](encoder as any, true);
   const generateDecoderJSONSchema = (contentType: string, encoder: unknown) =>
     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
-    decoders[contentType as keyof TInputContents](encoder as any, true);
+    decoders[contentType as TRequestBodyContentTypes](encoder as any, true);
   const getAnyUndefinedPossibility = (decoderOrEncoder: unknown) =>
     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
     getUndefinedPossibility(decoderOrEncoder as any);
   return {
-    getEndpointsMetadata: (pathItemBase, urlSpec, methods) => {
-      if (Object.keys(methods).length > 0) {
-        const pathObject: openapi.PathItemObject = { ...pathItemBase };
-        const urlParameters = getURLParameters(stringDecoder, urlSpec);
-        if (urlParameters.length > 0) {
-          // URL path parameters as common parameters for all operations under this URL path
-          pathObject.parameters = urlParameters;
-        }
-        for (const [method, epInfo] of Object.entries(methods)) {
-          if (epInfo) {
-            pathObject[method.toLowerCase() as Lowercase<openapi.HttpMethods>] =
+    afterDefiningURLEndpoints: (
+      {
+        patternSpec,
+        md: { pathItem: pathItemData, url: urlParameters },
+        url: urlMD,
+      },
+      endpoints,
+    ) => {
+      const hasURLParameters = urlParameters !== undefined;
+
+      const securitySchemes: Record<string, openapi.SecuritySchemeObject> = {};
+      const pathItem: openapi.PathItemObject = {
+        ...pathItemData,
+        ...Object.fromEntries(
+          Object.entries(endpoints).map(
+            ([methodUppercased, { spec, md: operationData }]) => [
+              methodUppercased.toLowerCase(),
               getOperationObject(
                 getAnyUndefinedPossibility,
                 generateDecoderJSONSchema,
                 generateEncoderJSONSchema,
                 stringDecoder,
                 stringEncoder,
-                epInfo,
-              );
-          }
-        }
-        const urlString = getUrlPathString(urlSpec);
-        return (urlPrefix) => ({
-          urlPath: `${urlPrefix}${urlString}`,
-          pathObject,
-        });
-      } else {
-        return () => undefined;
+                getSecurityObjects,
+                spec,
+                operationData as FullEndpointSpecMDParameter<TProtocolEncodedHKT>,
+                securitySchemes,
+                hasURLParameters,
+              ),
+            ],
+          ),
+        ),
+      };
+      if (hasURLParameters) {
+        pathItem.parameters = getURLParameters(
+          stringDecoder,
+          urlMD,
+          urlParameters,
+          patternSpec,
+        );
       }
+      return {
+        pattern: getUrlPathString(patternSpec),
+        pathItem,
+        securitySchemes,
+      };
     },
     createFinalMetadata: (info, paths) => {
       const components: openapi.ComponentsObject = {};
       // TODO aggressively cache all cacheable things to components
-      const securitySchemes: Record<string, openapi.SecuritySchemeObject> = {};
-      paths.forEach(({ md, stateMD }) => {
-        if (md) {
-          Object.values(openapi.HttpMethods).forEach((method) => {
-            const operation = md.pathObject[method];
-            if (operation) {
-              const operationMD =
-                stateMD[method.toUpperCase() as keyof typeof stateMD];
-              if (operationMD && operationMD.securitySchemes.length > 0) {
-                operation.security = operationMD.securitySchemes.map(
-                  ({ name }) => ({
-                    [name]: [],
-                  }),
-                );
-                operationMD.securitySchemes.forEach(
-                  ({ name, scheme }) => (securitySchemes[name] = scheme),
-                );
-              }
-            }
-          });
-        }
+      const allSecuritySchemes: Record<string, openapi.SecuritySchemeObject> =
+        {};
+      paths.forEach(({ securitySchemes }) => {
+        Object.assign(allSecuritySchemes, securitySchemes);
       });
-      if (Object.keys(securitySchemes).length > 0) {
-        components.securitySchemes = securitySchemes;
+      if (Object.keys(allSecuritySchemes).length > 0) {
+        components.securitySchemes = allSecuritySchemes;
       }
       const doc: openapi.Document = {
         openapi: "3.0.3",
         info,
         paths: Object.fromEntries(
-          paths
-            .map(({ md }) => md)
-            .filter((info): info is types.PathsObjectInfo => !!info)
-            .map(({ urlPath, pathObject }) => [urlPath, pathObject]),
+          paths.map(({ pattern, pathItem }) => [pattern, pathItem]),
         ),
       };
       if (Object.keys(components).length > 0) {
@@ -139,97 +133,182 @@ jsonSchemaPlugin.SupportedJSONSchemaFunctionality<
   };
 };
 
+const getURLParameters = <TValidatorHKT extends data.ValidatorHKTBase>(
+  stringDecoder: StringDecoder<TValidatorHKT>,
+  urlSpec: dataBE.URLParameterValidatorSpecMetadata<
+    protocol.TTextualDataBase,
+    TValidatorHKT
+  >,
+  urlObject: types.MetadataParameterURL<protocol.TURLDataBase>["url"],
+  patternSpec: md.URLPathPatternInfo,
+) => {
+  const urlParamObjects = Object.entries(urlObject).map(
+    ([name, urlParam]): openapi.ParameterObject => ({
+      ...urlParam,
+      name,
+      in: "url",
+      required: true,
+      schema: {
+        ...stringDecoder(urlSpec[name].decoder, true),
+        pattern: urlSpec[name].regExp.source,
+      },
+    }),
+  );
+  urlParamObjects.sort(
+    (x, y) =>
+      patternSpec.findIndex((v) => typeof v !== "string" && v.name === x.name) -
+      patternSpec.findIndex((v) => typeof v !== "string" && v.name === y.name),
+  );
+  return urlParamObjects;
+};
+
 const getOperationObject = <
-  TStringDecoder,
-  TStringEncoder,
-  TOutputContents extends dataBE.TOutputContentsBase,
-  TInputContents extends dataBE.TInputContentsBase,
+  TProtocolEncodedHKT extends protocol.EncodedHKTBase,
+  TValidatorHKT extends data.ValidatorHKTBase,
+  TStateHKT extends dataBE.StateHKTBase,
 >(
-  getUndefinedPossibility: jsonSchemaPlugin.GetUndefinedPossibility<unknown>,
+  getUndefinedPossibility: jsonSchemaPlugin.GetUndefinedPossibility<
+    | data.AnyDecoderGeneric<TValidatorHKT>
+    | data.AnyEncoderGeneric<TValidatorHKT>
+  >,
   generateDecoderJSONSchema: GenerateAnyJSONSchema,
   generateEncoderJSONSchema: GenerateAnyJSONSchema,
-  stringDecoder: StringDecoderOrEncoder<TStringDecoder>,
-  stringEncoder: StringDecoderOrEncoder<TStringEncoder>,
-  endpointInfo: md.EndpointMetadataInformation<
-    types.OpenAPIArguments,
-    TStringDecoder,
-    TStringEncoder,
-    TOutputContents,
-    TInputContents
-  >,
-): openapi.OperationObject => {
-  const {
-    metadataArguments,
-    requestHeadersSpec,
-    responseHeadersSpec,
-    querySpec,
-    inputSpec,
-    outputSpec,
-  } = endpointInfo;
-  const parameters: Array<openapi.ParameterObject> = [];
+  stringDecoder: StringDecoder<TValidatorHKT>,
+  stringEncoder: StringEncoder<TValidatorHKT>,
+  getSecurityObjects: GetOperationSecurityInformation<TStateHKT>,
+  {
+    query,
+    requestBody,
+    requestHeaders,
+    responseBody,
+    responseHeaders,
+    stateInfo,
+  }: md.SingleEndpointSpecMetadata<TValidatorHKT, TStateHKT>,
+  {
+    operation,
+    requestBody: requestBodyObject,
+    query: queryObject,
+    responseBody: responseBodyObject,
+    headers: requestHeadersObject,
+    responseHeaders: responseHeadersObject,
+    customize400Response,
+    customize422Response,
+  }: FullEndpointSpecMDParameter<TProtocolEncodedHKT>,
+  securitySchemes: Record<string, openapi.SecuritySchemeObject>,
+  hasURLParameters: boolean,
+) => {
   const responseObjects = getResponseBody(
     getUndefinedPossibility,
     generateEncoderJSONSchema,
-    outputSpec,
-    metadataArguments.responseBody,
+    responseBody,
+    responseBodyObject,
   );
-  handleResponseHeaders(stringEncoder, responseHeadersSpec, responseObjects);
+  handleResponseHeaders(
+    stringEncoder,
+    responseHeaders,
+    responseHeadersObject,
+    responseObjects,
+  );
   const operationObject: openapi.OperationObject = {
-    ...metadataArguments.operation,
+    ...operation,
     responses: responseObjects,
   };
-  // Request headers
-  parameters.push(...getRequestHeaders(stringDecoder, requestHeadersSpec));
-  // Query parameters
-  parameters.push(...getQuery(stringDecoder, querySpec));
+  const parameters: Array<openapi.ParameterObject> = [];
+  parameters.push(
+    ...getRequestHeaders(stringDecoder, requestHeaders, requestHeadersObject),
+  );
+  const prevLength = parameters.length;
+  const hasRequestHeaders = prevLength > 0;
+  parameters.push(...getQuery(stringDecoder, query, queryObject));
+  const hasQueryParameters = parameters.length > prevLength;
   if (parameters.length > 0) {
     operationObject.parameters = parameters;
   }
 
   // Request body
-  const requestBody = getRequestBody(
-    getUndefinedPossibility,
-    generateDecoderJSONSchema,
-    inputSpec,
-    metadataArguments.requestBody,
-  );
-  if (requestBody) {
-    operationObject.requestBody = requestBody;
+  if (requestBody && requestBodyObject) {
+    operationObject.requestBody = getRequestBody(
+      getUndefinedPossibility,
+      generateDecoderJSONSchema,
+      requestBody,
+      requestBodyObject,
+    );
+    const response422: openapi.ResponseObject = {
+      description: "If request body validation fails.",
+    };
+    operationObject.responses[422] =
+      customize422Response?.(response422) ?? response422;
+  }
+
+  const security = getSecurityObjects(stateInfo);
+  if (security && security.securitySchemes.length > 0) {
+    let optionalSecuritySchemeSeen = false;
+    operationObject.security = security.securitySchemes.map((schemeUsages) =>
+      schemeUsages.reduce<openapi.SecurityRequirementObject>(
+        (sec, { schemeID, requirementData, isOptional }) => {
+          optionalSecuritySchemeSeen = optionalSecuritySchemeSeen || isOptional;
+          sec[schemeID] = requirementData;
+          return sec;
+        },
+        {},
+      ),
+    );
+    if (optionalSecuritySchemeSeen) {
+      // This is how security optionality is defined in OpenAPI
+      // https://stackoverflow.com/questions/47659324/how-to-specify-an-endpoints-authorization-is-optional-in-openapi-v3
+      operationObject.security?.unshift({});
+    }
+    operationObject.responses[401] = security.ifFailed;
+    for (const { schemeID, scheme } of security.securitySchemes.flat()) {
+      securitySchemes[schemeID] = scheme;
+    }
+  }
+
+  if (hasRequestHeaders || hasQueryParameters || hasURLParameters) {
+    const conditionString = Object.entries({
+      URL: hasURLParameters,
+      query: hasQueryParameters,
+      [`request headers`]: hasRequestHeaders,
+    })
+      .filter(([, val]) => val)
+      .map(([name]) => name)
+      .join(" or ");
+    const response400: openapi.ResponseObject = {
+      description: `If ${conditionString} fail validation.`,
+    };
+    operationObject.responses[400] =
+      customize400Response?.(response400) ?? response400;
   }
 
   return operationObject;
 };
 
-const getURLParameters = <TStringDecoder>(
-  stringDecoder: StringDecoderOrEncoder<TStringDecoder>,
-  urlSpec: md.URLParametersInfo<TStringDecoder>,
-): Array<openapi.ParameterObject> =>
-  urlSpec
-    .filter(
-      (s): s is md.URLParameterSpec<TStringDecoder> => typeof s !== "string",
-    )
-    .map(({ name, spec: urlParamSpec }) => ({
-      name: name,
-      in: "path",
-      required: true,
-      schema: {
-        ...stringDecoder(urlParamSpec.decoder, true),
-        pattern: urlParamSpec.regExp.source,
-      },
-    }));
-
-const getResponseBody = (
-  getUndefinedPossibility: jsonSchemaPlugin.GetUndefinedPossibility<unknown>,
+const getResponseBody = <
+  TProtocolEncodedHKT extends protocol.EncodedHKTBase,
+  TValidatorHKT extends data.ValidatorHKTBase,
+>(
+  getUndefinedPossibility: jsonSchemaPlugin.GetUndefinedPossibility<
+    data.AnyEncoderGeneric<TValidatorHKT>
+  >,
   generateJSONSchema: GenerateAnyJSONSchema,
-  outputSpec: dataBE.DataValidatorResponseOutputValidatorSpec<dataBE.TOutputContentsBase>,
-  output: types.OpenAPIArgumentsResponseBody<unknown>["responseBody"],
+  outputSpec: dataBE.DataValidatorResponseOutputValidatorSpec<
+    unknown,
+    unknown,
+    TValidatorHKT,
+    string
+  >,
+  output: types.MetadataParameterResponseBody<
+    TProtocolEncodedHKT,
+    unknown,
+    string
+  >["responseBody"],
 ): Record<string, openapi.ResponseObject> => {
   const contentEntries = Object.entries(outputSpec.contents);
   let hasResponse204 = false;
   const response200Entries: ContentTypeDecodersOrEncoders = [];
   for (const [contentType, contentOutput] of contentEntries) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
-    const undefinedPossibility = getUndefinedPossibility(contentOutput as any);
+    const undefinedPossibility = getUndefinedPossibility(contentOutput);
     if (undefinedPossibility !== false) {
       hasResponse204 = true;
     }
@@ -257,18 +336,25 @@ const getResponseBody = (
   return responseObjects;
 };
 
-const handleResponseHeaders = <TStringEncoder>(
-  stringEncoder: StringDecoderOrEncoder<TStringEncoder>,
+const handleResponseHeaders = <TValidatorHKT extends data.ValidatorHKTBase>(
+  stringEncoder: StringEncoder<TValidatorHKT>,
   responseHeadersSpec:
-    | dataBE.ResponseHeaderDataValidatorSpecMetadata<string, TStringEncoder>
+    | dataBE.ResponseHeaderDataValidatorSpecMetadata<
+        protocol.TResponseHeadersDataBase,
+        TValidatorHKT
+      >
+    | undefined,
+  responseHeadersObject:
+    | types.MetadataParameterResponseHeaders<protocol.TResponseHeadersDataBase>["responseHeaders"]
     | undefined,
   responseObjects: ReturnType<typeof getResponseBody>,
 ) => {
-  if (responseHeadersSpec) {
+  if (responseHeadersSpec && responseHeadersObject) {
     for (const responseObject of Object.values(responseObjects)) {
       responseObject.headers = data.transformEntries(
         responseHeadersSpec,
-        ({ required, encoder }): openapi.HeaderObject => ({
+        ({ required, encoder }, headerName): openapi.HeaderObject => ({
+          ...responseHeadersObject[headerName],
           required,
           schema: stringEncoder(encoder, true),
         }),
@@ -277,57 +363,83 @@ const handleResponseHeaders = <TStringEncoder>(
   }
 };
 
-const getRequestHeaders = <TStringDecoder>(
-  stringDecoder: StringDecoderOrEncoder<TStringDecoder>,
+const getRequestHeaders = <TValidatorHKT extends data.ValidatorHKTBase>(
+  stringDecoder: StringDecoder<TValidatorHKT>,
   requestHeadersSpec:
-    | dataBE.RequestHeaderDataValidatorSpecMetadata<string, TStringDecoder>
+    | dataBE.RequestHeaderDataValidatorSpecMetadata<
+        protocol.TRequestHeadersDataBase,
+        TValidatorHKT
+      >
+    | undefined,
+  requestHeadersObject:
+    | types.MetadataParameterRequestHeaders<protocol.TRequestHeadersDataBase>["headers"]
     | undefined,
 ) =>
-  Object.entries(requestHeadersSpec ?? {}).map<openapi.ParameterObject>(
-    ([headerName, { required, decoder }]) => ({
-      in: "header",
-      name: headerName,
-      required,
-      schema: stringDecoder(decoder, true),
-    }),
-  );
+  requestHeadersSpec && requestHeadersObject
+    ? Object.entries(requestHeadersSpec).map<openapi.ParameterObject>(
+        ([headerName, { required, decoder }]) => ({
+          ...requestHeadersObject[headerName],
+          in: "header",
+          name: headerName,
+          required,
+          schema: stringDecoder(decoder, true),
+        }),
+      )
+    : [];
 
-const getQuery = <TStringDecoder>(
-  stringDecoder: StringDecoderOrEncoder<TStringDecoder>,
+const getQuery = <TValidatorHKT extends data.ValidatorHKTBase>(
+  stringDecoder: StringDecoder<TValidatorHKT>,
   querySpec:
-    | dataBE.QueryDataValidatorSpecMetadata<string, TStringDecoder>
+    | dataBE.QueryDataValidatorSpecMetadata<
+        protocol.TQueryDataBase,
+        TValidatorHKT
+      >
+    | undefined,
+  queryObject:
+    | types.MetadataParameterQuery<protocol.TQueryDataBase>["query"]
     | undefined,
 ) =>
-  Object.entries(querySpec ?? {}).map<openapi.ParameterObject>(
-    ([qParamName, { required, decoder }]) => ({
-      in: "query",
-      name: qParamName,
-      required,
-      schema: stringDecoder(decoder, true),
-    }),
-  );
+  querySpec && queryObject
+    ? Object.entries(querySpec).map<openapi.ParameterObject>(
+        ([qParamName, { required, decoder }]) => ({
+          ...queryObject[qParamName],
+          in: "query",
+          name: qParamName,
+          required,
+          schema: stringDecoder(decoder, true),
+        }),
+      )
+    : [];
 
-const getRequestBody = (
-  getUndefinedPossibility: jsonSchemaPlugin.GetUndefinedPossibility<unknown>,
+const getRequestBody = <
+  TProtocolEncodedHKT extends protocol.EncodedHKTBase,
+  TValidatorHKT extends data.ValidatorHKTBase,
+>(
+  getUndefinedPossibility: jsonSchemaPlugin.GetUndefinedPossibility<
+    | data.AnyDecoderGeneric<TValidatorHKT>
+    | data.AnyEncoderGeneric<TValidatorHKT>
+  >,
   generateJSONSchema: GenerateAnyJSONSchema,
-  inputSpec:
-    | dataBE.DataValidatorResponseInputValidatorSpec<dataBE.TInputContentsBase>
-    | undefined,
-  body: types.OpenAPIArgumentsRequestBody<unknown>["requestBody"],
-) => {
-  let requestBody: openapi.RequestBodyObject | undefined;
-  if (inputSpec) {
-    const inputEntries = Object.entries(inputSpec.contents);
-    requestBody = {
-      required: !inputEntries.some(
-        ([, contentInput]) =>
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
-          getUndefinedPossibility(contentInput as any) !== false,
-      ),
-      content: getContentMap(inputEntries, body, generateJSONSchema),
-    };
-  }
-  return requestBody;
+  inputSpec: dataBE.DataValidatorResponseInputValidatorSpec<
+    unknown,
+    TValidatorHKT,
+    string
+  >,
+  body: types.MetadataParameterRequestBody<
+    TProtocolEncodedHKT,
+    unknown,
+    string
+  >["requestBody"],
+): openapi.RequestBodyObject => {
+  const inputEntries = Object.entries(inputSpec.contents);
+  return {
+    required: !inputEntries.some(
+      ([, contentInput]) =>
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
+        getUndefinedPossibility(contentInput as any) !== false,
+    ),
+    content: getContentMap(inputEntries, body, generateJSONSchema),
+  };
 };
 
 const addSchema = <
@@ -344,7 +456,7 @@ const addSchema = <
 
 const getContentMap = (
   contentEntries: ContentTypeDecodersOrEncoders,
-  mediaTypes: Record<string, types.OpenAPIParameterMedia<unknown>>,
+  mediaTypes: Record<string, types.MetadataParameterMediaType<unknown>>,
   generateJSONSchema: GenerateAnyJSONSchema,
 ) =>
   Object.fromEntries(
@@ -359,9 +471,7 @@ const getContentMap = (
     ]),
   );
 
-const getUrlPathString = <TStringDecoder>(
-  urlSpec: md.URLParametersInfo<TStringDecoder>,
-) =>
+const getUrlPathString = (urlSpec: md.URLPathPatternInfo) =>
   urlSpec
     .map((stringOrSpec) =>
       typeof stringOrSpec === "string"
@@ -376,7 +486,88 @@ type GenerateAnyJSONSchema = (
   ...entry: ContentTypeDecodersOrEncoders[number]
 ) => openapi.SchemaObject | undefined;
 
-type StringDecoderOrEncoder<TStringTransformer> = jsonSchemaPlugin.Transformer<
-  TStringTransformer,
-  openapi.SchemaObject
+type StringEncoder<TValidatorHKT extends data.ValidatorHKTBase> =
+  jsonSchemaPlugin.Transformer<
+    data.AnyEncoderGeneric<TValidatorHKT>,
+    openapi.SchemaObject
+  >;
+type StringDecoder<TValidatorHKT extends data.ValidatorHKTBase> =
+  jsonSchemaPlugin.Transformer<
+    data.AnyDecoderGeneric<TValidatorHKT>,
+    openapi.SchemaObject
+  >;
+
+/**
+ * This type is callback type to extract {@link OperationSecurityInformation} from BE endpoint state information.
+ */
+export type GetOperationSecurityInformation<
+  TStateHKT extends dataBE.StateHKTBase,
+> = (
+  stateInfo: ep.EndpointStateInformation<
+    dataBE.MaterializeStateInfo<
+      TStateHKT,
+      dataBE.MaterializeStateSpecBase<TStateHKT>
+    >,
+    dataBE.MaterializeRuntimeState<
+      TStateHKT,
+      dataBE.MaterializeStateSpecBase<TStateHKT>
+    >
+  >,
+) => undefined | OperationSecurityInformation;
+
+/**
+ * This type contains information about security schemes related to single BE endpoint.
+ */
+export interface OperationSecurityInformation {
+  /**
+   * The security schemes used by this endpoint.
+   * The property is an array of one or more usages of single security scheme.
+   * Each element of this array is another array of one or more elements, each element of this sub-array representing one usage of one security scheme.
+   *
+   * Typically, there is just one element in both outer and inner arrays, but more complex endpoints may have different amount of elements.
+   */
+  securitySchemes: Array<Array<OperationSecuritySchemeUsage>>;
+
+  /**
+   * The {@link openapi.ResponseObject} to use for response for HTTP code `401`.
+   */
+  ifFailed: openapi.ResponseObject;
+}
+
+/**
+ * This type contains information about one BE endpoint usage of one security scheme.
+ */
+export interface OperationSecuritySchemeUsage {
+  /**
+   * The textual ID of the security scheme - will be used as key for {@link openapi.ComponentsObject.securitySchemes}.
+   */
+  schemeID: string;
+
+  /**
+   * The information about the security scheme identifier by {@link schemeID}.
+   */
+  scheme: openapi.SecuritySchemeObject;
+
+  /**
+   * The information about requirements for the security scheme by this specific BE endpoint.
+   */
+  requirementData: Array<string>;
+
+  /**
+   * Should be `true` if authentication is optional for this specific BE endpoint, `false` otherwise.
+   */
+  isOptional: boolean;
+}
+
+type FullEndpointSpecMDParameter<
+  TProtocolEncodedHKT extends protocol.EncodedHKTBase,
+> = md.MaterializeParameterWhenSpecifyingEndpoint<
+  types.MetadataProviderHKT,
+  TProtocolEncodedHKT,
+  protocol.ProtocolSpecCore<protocol.HttpMethod, unknown> &
+    protocol.ProtocolSpecHeaderData<protocol.TRequestHeadersDataBase> &
+    protocol.ProtocolSpecResponseHeaders<protocol.TResponseHeadersDataBase> &
+    protocol.ProtocolSpecQuery<protocol.TQueryDataBase>,
+  string,
+  string
 >;
