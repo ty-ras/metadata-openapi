@@ -43,12 +43,17 @@ export const removeAuthenticatedOperations = (
     : removeSecuritySchemes(metadata);
 };
 
+// We have to disable require-yields because in util.d.ts file, there is no function body, and thus no yields statements.
+// This results into error:
+//  14:1  error  Missing JSDoc @returns declaration                                                jsdoc/require-returns
+//  14:1  error  JSDoc @yields declaration present but yield expression not available in function  jsdoc/require-yields-check
+// eslint-disable-next-line jsdoc/require-yields
 /**
  * Function to iterate {@link openapi.PathsObject}s within given {@link openapi.Document} which end up with at least one suitable {@link openapi.OperationObject} after applying given callback to all of the operation objects of that path object.
  * @param metadata The {@link openapi.Document} to filter operations from.
  * @param filter The callback invoked for every encountered {@link openapi.OperationObject}. If returns `true`, then operation will be filtered out from {@link openapi.PathsObject} containing it.
  * @param transform The callback to transform {@link openapi.OperationObject}s which don't match the given `filter`. Notice that this will receive an original operation object, and should not modify it directly!
- * @yields Yields the tuples: the key of {@link openapi.PathsObject}, then object containing the path object if it contains at least one suitable {@link openapi.OperationObject}, and information whether any operations were removed.
+ * @returns Yields the tuples: the key of {@link openapi.PathsObject}, then object containing the path object if it contains at least one suitable {@link openapi.OperationObject}, and information whether any operations were removed.
  */
 export function* removeOperationsMatchingFilter(
   metadata: openapi.Document,
