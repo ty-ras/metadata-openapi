@@ -17,7 +17,15 @@ export const removeAuthenticatedOperations = (
   const unauthenticatedPaths = Array.from(
     removeOperationsMatchingFilter(
       metadata,
-      (operation) => (operation.security?.length ?? 0) > 0,
+      ({ security }) =>
+        // If the openapi.SecurityRequirementObject has 0 keys, it means that the security is optional
+        // https://stackoverflow.com/questions/47659324/how-to-specify-an-endpoints-authorization-is-optional-in-openapi-v3
+        // Technically, we need to worry only about 1st element in operation.security then, but let's just assume that any zero-keyed requirement signals optionality.
+        !!security &&
+        security.length > 0 &&
+        security.every((sec) => Object.keys(sec).length > 0),
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      ({ security: _, ...operation }) => operation,
     ),
   );
   return originalPathsLength > unauthenticatedPaths.length ||
@@ -35,33 +43,46 @@ export const removeAuthenticatedOperations = (
     : removeSecuritySchemes(metadata);
 };
 
-// eslint-disable-next-line jsdoc/require-yields
 /**
  * Function to iterate {@link openapi.PathsObject}s within given {@link openapi.Document} which end up with at least one suitable {@link openapi.OperationObject} after applying given callback to all of the operation objects of that path object.
  * @param metadata The {@link openapi.Document} to filter operations from.
  * @param filter The callback invoked for every encountered {@link openapi.OperationObject}. If returns `true`, then operation will be filtered out from {@link openapi.PathsObject} containing it.
- * @returns Yields the tuples: the key of {@link openapi.PathsObject}, then object containing the path object if it contains at least one suitable {@link openapi.OperationObject}, and information whether any operations were removed.
+ * @param transform The callback to transform {@link openapi.OperationObject}s which don't match the given `filter`. Notice that this will receive an original operation object, and should not modify it directly!
+ * @yields Yields the tuples: the key of {@link openapi.PathsObject}, then object containing the path object if it contains at least one suitable {@link openapi.OperationObject}, and information whether any operations were removed.
  */
 export function* removeOperationsMatchingFilter(
   metadata: openapi.Document,
   filter: (op: openapi.OperationObject) => boolean,
+  transform: (op: openapi.OperationObject) => openapi.OperationObject,
 ) {
   for (const [pathKey, pathObject] of Object.entries(metadata.paths)) {
     let pathObjectOrExclude: typeof pathObject | string = pathObject;
     if (pathObject) {
-      const supportedMethods = Object.values(openapi.HttpMethods).filter(
-        (method) => method in pathObject,
+      const methodsInPath = Object.values(openapi.HttpMethods)
+        .map((method) => ({ method, operation: pathObject[method] }))
+        .filter(
+          (
+            info,
+          ): info is {
+            method: openapi.HttpMethods;
+            operation: openapi.OperationObject;
+          } => !!info.operation,
+        );
+      const methodsToPreserve = new Map<
+        openapi.HttpMethods,
+        openapi.OperationObject
+      >(
+        methodsInPath
+          .filter(({ operation }) => !filter(operation))
+          .map(({ method, operation }) => [method, transform(operation)]),
       );
-      const operationsToBeRemoved = supportedMethods.filter((method) => {
-        const operation = pathObject[method];
-        return operation && filter(operation);
-      });
       pathObjectOrExclude =
-        operationsToBeRemoved.length > 0
-          ? supportedMethods.length > operationsToBeRemoved.length
-            ? removeOperations(pathObject, operationsToBeRemoved)
-            : "exclude"
-          : pathObject;
+        methodsToPreserve.size > 0
+          ? preserveOperations(pathObject, methodsInPath, methodsToPreserve)
+          : methodsInPath.length > 0
+          ? "exclude"
+          : // Path object without any methods I guess is not according to spec, but let's just not touch it then.
+            pathObject;
     }
     if (typeof pathObjectOrExclude !== "string") {
       yield [
@@ -75,13 +96,22 @@ export function* removeOperationsMatchingFilter(
   }
 }
 
-const removeOperations = (
+const preserveOperations = (
   pathObject: openapi.PathItemObject,
-  methods: ReadonlyArray<openapi.HttpMethods>,
+  methodsInPath: ReadonlyArray<{
+    method: openapi.HttpMethods;
+    operation: openapi.OperationObject;
+  }>,
+  methodsToPreserve: Map<openapi.HttpMethods, openapi.OperationObject>,
 ): openapi.PathItemObject => {
   const shallowClone = { ...pathObject };
-  for (const method of methods) {
-    delete shallowClone[method];
+  for (const { method } of methodsInPath) {
+    const operationToPreserve = methodsToPreserve.get(method);
+    if (operationToPreserve) {
+      shallowClone[method] = operationToPreserve;
+    } else {
+      delete shallowClone[method];
+    }
   }
   return shallowClone;
 };
