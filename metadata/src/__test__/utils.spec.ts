@@ -64,10 +64,16 @@ test("Validate removeAuthenticatedOperations returns same object if all endpoint
       },
     },
   };
-  c.is(
-    spec.removeAuthenticatedOperations(docWithOperations),
-    docWithOperations,
-  );
+  c.deepEqual(spec.removeAuthenticatedOperations(docWithOperations), {
+    ...common,
+    paths: {
+      path: {
+        get: {
+          responses: {},
+        },
+      },
+    },
+  });
   const docWithOperationsAndUndefinedSecurity: openapi.Document = {
     ...common,
     paths: {
@@ -80,9 +86,18 @@ test("Validate removeAuthenticatedOperations returns same object if all endpoint
       },
     },
   };
-  c.is(
+  c.deepEqual(
     spec.removeAuthenticatedOperations(docWithOperationsAndUndefinedSecurity),
-    docWithOperationsAndUndefinedSecurity,
+    {
+      ...common,
+      paths: {
+        path: {
+          get: {
+            responses: {},
+          },
+        },
+      },
+    },
   );
 });
 
@@ -117,7 +132,6 @@ test("Validate removeAuthenticatedOperations removes only authenticated operatio
       path: {
         post: {
           responses: {},
-          security: [],
         },
       },
     },
@@ -142,6 +156,39 @@ test("Validate removeAuthenticatedOperations removes only authenticated operatio
       components,
     },
   );
+});
+
+test("Validate removeAuthenticatedOperations preserves operations with optional security", (c) => {
+  c.plan(1);
+  const docWithAuthenticated: openapi.Document = {
+    ...common,
+    paths: {
+      path: {
+        get: {
+          responses: {},
+          security: [{}, { auth: [] }],
+        },
+      },
+    },
+    components: {
+      securitySchemes: {
+        auth: {
+          type: "http",
+          scheme: "bearer",
+        },
+      },
+    },
+  };
+  c.deepEqual(spec.removeAuthenticatedOperations(docWithAuthenticated), {
+    ...common,
+    paths: {
+      path: {
+        get: {
+          responses: {},
+        },
+      },
+    },
+  });
 });
 
 const common: Pick<openapi.Document, "openapi" | "info"> = {

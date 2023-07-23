@@ -2,6 +2,7 @@
  * @file This file contains function to convert fully-fledged JSON schema 7 values into the ones supported by OpenAPI.
  */
 
+import * as data from "@ty-ras/data";
 import type * as jsonSchema from "json-schema";
 import type * as jsonSchemaPlugin from "@ty-ras/metadata-jsonschema";
 import type { OpenAPIV3 as openapi } from "openapi-types";
@@ -24,7 +25,7 @@ const convertBooleanSchemasToObjects = (
     ? schema
       ? {}
       : { not: {} }
-    : stripUndefineds({
+    : data.stripUndefineds({
         ...transformConstToEnum(schema),
         items: handleSchemaOrArray(schema.items),
         additionalItems: handleSchemaOrArray(schema.additionalItems),
@@ -86,12 +87,3 @@ const handleSchemaRecord = <
             : val;
         return newRecord;
       }, {} as typeof record);
-
-const stripUndefineds = <T extends Record<string, unknown>>(val: T): T => {
-  for (const key of Object.keys(val)) {
-    if (val[key] === undefined) {
-      delete val[key];
-    }
-  }
-  return val;
-};
