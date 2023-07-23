@@ -68,7 +68,8 @@ export const createOpenAPIProviderGeneric = <
       },
       endpoints,
     ) => {
-      const hasURLParameters = urlParameters !== undefined;
+      const hasURLParameters =
+        urlParameters !== undefined && Object.keys(urlParameters).length > 0;
 
       const securitySchemes: Record<string, openapi.SecuritySchemeObject> = {};
       const pathItem: openapi.PathItemObject = {
@@ -146,7 +147,7 @@ const getURLParameters = <TValidatorHKT extends data.ValidatorHKTBase>(
     ([name, urlParam]): openapi.ParameterObject => ({
       ...urlParam,
       name,
-      in: "url",
+      in: "path",
       required: true,
       schema: {
         ...stringDecoder(urlSpec[name].decoder, true),

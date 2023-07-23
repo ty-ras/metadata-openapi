@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
 /**
  * @file This file contains unit tests for functionality in file `../provider.ts`.
  */
@@ -10,7 +9,7 @@ import type * as md from "@ty-ras/metadata";
 import type * as protocol from "@ty-ras/protocol";
 import type * as hkt from "../hkt.types";
 
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument,@typescript-eslint/no-unsafe-assignment */
 
 test("Validate createOpenAPIProvider works for simplest usecase", (t) => {
   t.plan(1);
@@ -27,270 +26,293 @@ test("Validate createOpenAPIProvider works for one simplest endpoint", (t) => {
   t.plan(1);
   const provider = createProvider();
   const doc = provider.createFinalMetadata(docCreationArgs(), [
-    provider.afterDefiningURLEndpoints(
-      {
-        patternSpec: [],
-        url: {},
-        md: {
-          pathItem: {},
-          url: {},
-        },
-      },
-      getSimpleEndpoint(),
-    ),
+    provider.afterDefiningURLEndpoints(getURLArgs(), getSimpleEndpoint()),
   ]);
   t.deepEqual(doc, makeDoc(getSimpleEndpointOpenAPIPaths()));
 });
 
-// test("Validate createOpenAPIProvider works for one complex endpoint", (t) => {
-//   t.plan(1);
-//   const provider = createProvider();
-//   const doc = provider.createFinalMetadata(docCreationArgs(), [
-//     {
-//       md: provider.afterDefiningURLEndpoints(
-//         {
-//           description: "Endpoint at some URL",
-//           summary: "Will perform its task",
-//         },
-//         [
-//           "/path/",
-//           {
-//             name: "parameter",
-//             spec: {
-//               decoder: "url-parameter",
-//               regExp: /.*/,
-//             },
-//           },
-//         ],
-//         {
-//           GET: {
-//             requestHeadersSpec: {
-//               headerParam: {
-//                 required: true,
-//                 decoder: "request-header-contents",
-//               },
-//             },
-//             querySpec: {
-//               queryParam: {
-//                 required: true,
-//                 decoder: "query-contents",
-//               },
-//             },
-//             inputSpec: {
-//               contents: {
-//                 string: "request-body-contents",
-//               },
-//             },
-//             outputSpec: {
-//               contents: {
-//                 string: "response-body-contents",
-//               },
-//             },
-//             responseHeadersSpec: {
-//               responseHeaderParam: {
-//                 required: true,
-//                 encoder: "response-header-contents",
-//               },
-//             },
-//             metadataArguments: {
-//               urlParameters: {
-//                 parameter: {
-//                   description: "url-parameter-description",
-//                 },
-//               },
-//               requestHeaders: {
-//                 headerParam: {
-//                   description: "request-header-description",
-//                 },
-//               },
-//               queryParameters: {
-//                 queryParam: {
-//                   description: "query-parameter-description",
-//                 },
-//               },
-//               requestBody: {
-//                 string: {
-//                   example: "request-body-example",
-//                 },
-//               },
-//               responseBody: {
-//                 description: "response-body-description",
-//                 mediaTypes: {
-//                   string: {
-//                     example: "response-body-example",
-//                   },
-//                 },
-//               },
-//               responseHeaders: {
-//                 responseHeaderParam: {
-//                   description: "response-header-description",
-//                 },
-//               },
-//               operation: {
-//                 description: "operation-description",
-//               },
-//             },
-//           },
-//         },
-//       )("/prefix"),
-//       stateMD: {},
-//     },
-//   ]);
-//   t.deepEqual(
-//     doc,
-//     makeDoc({
-//       "/prefix/path/{parameter}": {
-//         description: "Endpoint at some URL",
-//         summary: "Will perform its task",
-//         parameters: [
-//           {
-//             name: "parameter",
-//             in: "path",
-//             required: true,
-//             schema: { enum: ["url-parameter"], pattern: ".*" },
-//           },
-//         ],
-//         get: {
-//           description: "operation-description",
-//           responses: {
-//             "200": {
-//               description: "response-body-description",
-//               content: {
-//                 string: {
-//                   example: "response-body-example",
-//                   schema: { enum: ["response-body-contents"] },
-//                 },
-//               },
-//               headers: {
-//                 responseHeaderParam: {
-//                   required: true,
-//                   schema: { enum: ["response-header-contents"] },
-//                 },
-//               },
-//             },
-//           },
-//           parameters: [
-//             {
-//               in: "header",
-//               name: "headerParam",
-//               required: true,
-//               schema: { enum: ["request-header-contents"] },
-//             },
-//             {
-//               in: "query",
-//               name: "queryParam",
-//               required: true,
-//               schema: { enum: ["query-contents"] },
-//             },
-//           ],
-//           requestBody: {
-//             required: true,
-//             content: {
-//               string: {
-//                 example: "request-body-example",
-//                 schema: { enum: ["request-body-contents"] },
-//               },
-//             },
-//           },
-//         },
-//       },
-//     }),
-//   );
-// });
+test("Validate createOpenAPIProvider works for one complex endpoint", (t) => {
+  t.plan(1);
+  const provider = createProvider();
+  const doc = provider.createFinalMetadata(docCreationArgs(), [
+    provider.afterDefiningURLEndpoints(
+      {
+        md: {
+          pathItem: {
+            description: "Endpoint at some URL",
+            summary: "Will perform its task",
+          },
+          url: {
+            parameter: {},
+          },
+        },
+        url: {
+          parameter: {
+            decoder: "url-parameter",
+            regExp: /.*/,
+          },
+        },
+        patternSpec: [
+          "/prefix/path/",
+          {
+            name: "parameter",
+          },
+        ],
+      },
+      {
+        GET: {
+          spec: {
+            method: "GET",
+            stateInfo: {
+              stateInfo: [],
+              validator: () => {
+                throw new Error("This method should never be called");
+              },
+            },
+            requestHeaders: {
+              headerParam: {
+                required: true,
+                decoder: "request-header-contents",
+              },
+            },
+            query: {
+              queryParam: {
+                required: true,
+                decoder: "query-contents",
+              },
+            },
+            requestBody: {
+              contents: {
+                string: "request-body-contents",
+              },
+            },
+            responseBody: {
+              contents: {
+                string: "response-body-contents",
+              },
+            },
+            responseHeaders: {
+              responseHeaderParam: {
+                required: true,
+                encoder: "response-header-contents",
+              },
+            },
+          },
+          md: {
+            urlParameters: {
+              parameter: {
+                description: "url-parameter-description",
+              },
+            },
+            headers: {
+              headerParam: {
+                description: "request-header-description",
+              },
+            },
+            query: {
+              queryParam: {
+                description: "query-parameter-description",
+              },
+            },
+            requestBody: {
+              string: {
+                example: "request-body-example",
+              },
+            },
+            responseBody: {
+              description: "response-body-description",
+              mediaTypes: {
+                string: {
+                  example: "response-body-example",
+                },
+              },
+            },
+            responseHeaders: {
+              responseHeaderParam: {
+                description: "response-header-description",
+              },
+            },
+            operation: {
+              description: "operation-description",
+            },
+          } as (hkt.MetadataProviderHKT & {
+            _argProtocolSpec: {
+              method: "GET";
+              responseBody: string;
+              requestBody: string;
+              responseHeaders: { responseHeaderParam: string };
+              query: { queryParam: string };
+              headerData: { headerParam: string };
+            };
+            _argProtocolHKT: ProtoEncodedHKT;
+            _argResponseBodyContentTypes: "string";
+          })["_getParameterWhenSpecifyingEndpoint"] as any,
+        },
+      } as any,
+    ),
+  ]);
+  t.deepEqual(
+    doc,
+    makeDoc({
+      "/prefix/path/{parameter}": {
+        description: "Endpoint at some URL",
+        summary: "Will perform its task",
+        parameters: [
+          {
+            name: "parameter",
+            in: "path",
+            required: true,
+            schema: { enum: ["url-parameter"], pattern: ".*" },
+          },
+        ],
+        get: {
+          description: "operation-description",
+          responses: {
+            "200": {
+              description: "response-body-description",
+              content: {
+                string: {
+                  example: "response-body-example",
+                  schema: { enum: ["response-body-contents"] },
+                },
+              },
+              headers: {
+                responseHeaderParam: {
+                  required: true,
+                  schema: { enum: ["response-header-contents"] },
+                  description: "response-header-description",
+                },
+              },
+            },
+            400: {
+              description:
+                "If URL path parameters or query or request headers fail validation.",
+            },
+            422: {
+              description: "If request body validation fails.",
+            },
+          },
+          parameters: [
+            {
+              in: "header",
+              name: "headerParam",
+              required: true,
+              schema: { enum: ["request-header-contents"] },
+              description: "request-header-description",
+            },
+            {
+              in: "query",
+              name: "queryParam",
+              required: true,
+              schema: { enum: ["query-contents"] },
+              description: "query-parameter-description",
+            },
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              string: {
+                example: "request-body-example",
+                schema: { enum: ["request-body-contents"] },
+              },
+            },
+          },
+        },
+      },
+    }),
+  );
+});
 
-// test("Validate createOpenAPIProvider passes security schemes to final result", (t) => {
-//   t.plan(1);
-//   const scheme: openapi.SecuritySchemeObject = {
-//     type: "http",
-//     scheme: "Basic",
-//   };
-//   const provider = createProvider();
-//   t.deepEqual(
-//     provider.createFinalMetadata(docCreationArgs(), [
-//       {
-//         md: provider.afterDefiningURLEndpoints({}, [], getSimpleEndpoint())(""),
-//         stateMD: {
-//           GET: {
-//             securitySchemes: [
-//               {
-//                 name: "auth",
-//                 scheme,
-//               },
-//             ],
-//           },
-//         },
-//       },
-//     ]),
-//     makeDoc(
-//       getSimpleEndpointOpenAPIPaths({
-//         operation: {
-//           security: [
-//             {
-//               auth: [],
-//             },
-//           ],
-//         },
-//       }),
-//       {
-//         components: {
-//           securitySchemes: {
-//             auth: scheme,
-//           },
-//         },
-//       },
-//     ),
-//   );
-// });
+test("Validate createOpenAPIProvider passes security schemes to final result", (t) => {
+  t.plan(1);
+  const scheme: openapi.SecuritySchemeObject = {
+    type: "http",
+    scheme: "Basic",
+  };
+  const provider = createProvider();
+  t.deepEqual(
+    provider.createFinalMetadata(docCreationArgs(), [
+      provider.afterDefiningURLEndpoints(
+        getURLArgs(),
+        getSimpleEndpoint({
+          stateInfo: [
+            {
+              isOptional: false,
+              requirementData: [],
+              schemeID: "auth",
+              scheme,
+            },
+          ],
+        }),
+      ),
+    ]),
+    makeDoc(
+      getSimpleEndpointOpenAPIPaths({
+        operation: {
+          responses: {
+            401: {
+              description: "Authentication failed",
+            },
+          },
+          security: [
+            {
+              auth: [],
+            },
+          ],
+        },
+      }),
+      {
+        components: {
+          securitySchemes: {
+            auth: scheme,
+          },
+        },
+      },
+    ),
+  );
+});
 
-// test("Validate createOpenAPIProvider checks for undefined possibility of response body", (t) => {
-//   t.plan(1);
-//   const provider = createProvider();
-//   t.deepEqual(
-//     provider.createFinalMetadata(docCreationArgs(), [
-//       {
-//         md: provider.afterDefiningURLEndpoints(
-//           {},
-//           [],
-//           getSimpleEndpoint("undefined"),
-//         )(""),
-//         stateMD: {},
-//       },
-//     ]),
-//     makeDoc(
-//       getSimpleEndpointOpenAPIPaths({
-//         is204: true,
-//       }),
-//     ),
-//   );
-// });
+test("Validate createOpenAPIProvider checks for undefined possibility of response body", (t) => {
+  t.plan(1);
+  const provider = createProvider();
+  t.deepEqual(
+    provider.createFinalMetadata(docCreationArgs(), [
+      provider.afterDefiningURLEndpoints(
+        getURLArgs(),
+        getSimpleEndpoint({ responseReturnType: "undefined" }),
+      ),
+    ]),
+    makeDoc(
+      getSimpleEndpointOpenAPIPaths({
+        is204: true,
+      }),
+    ),
+  );
+});
 
-// test("Validate createOpenAPIProvider understands also potentially undefined response body", (t) => {
-//   t.plan(1);
-//   const provider = createProvider();
-//   const paths = getSimpleEndpointOpenAPIPaths({
-//     is204: true,
-//   });
-//   const responses = paths[""]?.get?.responses ?? {};
-//   if (!responses[204]) {
-//     t.fail("Expected 204 response to be present.");
-//   } else if (responses[200]) {
-//     t.fail("Did not expect 200 response to be present.");
-//   }
-//   responses[200] = getResponseFor200("maybeUndefined");
-//   t.deepEqual(
-//     provider.createFinalMetadata(docCreationArgs(), [
-//       {
-//         md: provider.afterDefiningURLEndpoints(
-//           {},
-//           [],
-//           getSimpleEndpoint("maybeUndefined"),
-//         )(""),
-//         stateMD: {},
-//       },
-//     ]),
-//     makeDoc(paths),
-//   );
-// });
+test("Validate createOpenAPIProvider understands also potentially undefined response body", (t) => {
+  t.plan(1);
+  const provider = createProvider();
+  const paths = getSimpleEndpointOpenAPIPaths({
+    is204: true,
+  });
+  const responses = paths[""]?.get?.responses ?? {};
+  if (!responses[204]) {
+    t.fail("Expected 204 response to be present.");
+  } else if (responses[200]) {
+    t.fail("Did not expect 200 response to be present.");
+  }
+  responses[200] = getResponseFor200("maybeUndefined");
+  t.deepEqual(
+    provider.createFinalMetadata(docCreationArgs(), [
+      provider.afterDefiningURLEndpoints(
+        getURLArgs(),
+        getSimpleEndpoint({ responseReturnType: "maybeUndefined" }),
+      ),
+    ]),
+    makeDoc(paths),
+  );
+});
 
 const makeConst = (val: string): openapi.SchemaObject => ({
   enum: [val],
@@ -306,8 +328,9 @@ const createProvider = () =>
     "string",
     "string"
   >(
-    () => ({
-      securitySchemes: [],
+    (stateInfo) => ({
+      securitySchemes:
+        stateInfo.stateInfo.length > 0 ? [[...stateInfo.stateInfo]] : [],
       ifFailed: {
         description: "Authentication failed",
       },
@@ -347,7 +370,7 @@ const makeDoc = (
 });
 
 const getSimpleEndpoint = (
-  responseReturnType = "validator-as-a-string",
+  opts: Partial<SimpleEndpointOptions> = DEFAULT_OPTS,
 ): Record<
   protocol.HttpMethod,
   md.SingleEndpointInformation<
@@ -357,6 +380,11 @@ const getSimpleEndpoint = (
     hkt.MetadataProviderHKT
   >
 > => {
+  const { responseReturnType, stateInfo } = Object.assign(
+    {},
+    DEFAULT_OPTS,
+    opts,
+  );
   const info: md.SingleEndpointInformation<
     ProtoEncodedHKT,
     ValidatorHKT,
@@ -386,8 +414,10 @@ const getSimpleEndpoint = (
       requestHeaders: undefined,
       responseHeaders: undefined,
       stateInfo: {
-        stateInfo: "stateInfo",
-        validator: () => ({ error: "none", data: "state" }),
+        stateInfo,
+        validator: () => {
+          throw new Error("This method should never be called");
+        },
       },
     },
   };
@@ -397,7 +427,9 @@ const getSimpleEndpoint = (
 };
 
 const getSimpleEndpointOpenAPIPaths = (info?: {
-  operation?: Omit<openapi.OperationObject, "responses">;
+  operation?: Omit<openapi.OperationObject, "responses"> & {
+    responses?: openapi.OperationObject["responses"];
+  };
   is204?: boolean;
 }): openapi.PathsObject => {
   const is204 = info?.is204 === true;
@@ -406,6 +438,7 @@ const getSimpleEndpointOpenAPIPaths = (info?: {
       get: {
         ...(info?.operation ?? {}),
         responses: {
+          ...info?.operation?.responses,
           [is204 ? 204 : 200]: {
             description,
           },
@@ -431,6 +464,32 @@ const getResponseFor200 = (enumValue?: string): openapi.ResponseObject => ({
     },
   },
 });
+
+const getURLArgs = (): Parameters<
+  md.MetadataProvider<
+    ProtoEncodedHKT,
+    ValidatorHKT,
+    StateHKT,
+    hkt.MetadataProviderHKT
+  >["afterDefiningURLEndpoints"]
+>[0] => ({
+  patternSpec: [],
+  url: {},
+  md: {
+    pathItem: {},
+    url: {},
+  },
+});
+
+interface SimpleEndpointOptions {
+  responseReturnType: ValidatorHKT["_getDecoder"];
+  stateInfo: StateHKT["_getStateInfo"];
+}
+
+const DEFAULT_OPTS = {
+  responseReturnType: "validator-as-a-string",
+  stateInfo: [],
+} as const satisfies SimpleEndpointOptions;
 
 import type * as data from "@ty-ras/data";
 import type * as dataBE from "@ty-ras/data-backend";
@@ -461,6 +520,6 @@ interface ProtoEncodedHKT extends protocol.EncodedHKTBase {
 
 interface StateHKT extends dataBE.StateHKTBase {
   readonly _getState: string;
-  readonly _getStateInfo: string;
+  readonly _getStateInfo: ReadonlyArray<spec.OperationSecuritySchemeUsage>;
   readonly _getStateSpecBase: string;
 }
