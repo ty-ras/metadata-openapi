@@ -5,3 +5,4 @@
 export type * from "./hkt.types";
 export * from "./provider";
 export * from "./jsonschema";
+export * from "./utils";
