@@ -6,6 +6,8 @@ import test from "ava";
 import * as spec from "../utils";
 import type { OpenAPIV3 as openapi } from "openapi-types";
 
+/* eslint-disable sonarjs/no-duplicate-string */
+
 test("Validate removeAuthenticatedOperations returns undefined if all endpoints are authenticated", (c) => {
   c.plan(1);
   c.deepEqual(
@@ -159,13 +161,23 @@ test("Validate removeAuthenticatedOperations removes only authenticated operatio
 });
 
 test("Validate removeAuthenticatedOperations preserves operations with optional security", (c) => {
-  c.plan(1);
+  c.plan(2);
   const docWithAuthenticated: openapi.Document = {
     ...common,
     paths: {
       path: {
         get: {
-          responses: {},
+          responses: {
+            200: {
+              description: "This should be preserved",
+            },
+            401: {
+              description: "This should be removed",
+            },
+            403: {
+              description: "This also should bee removed",
+            },
+          },
           security: [{}, { auth: [] }],
         },
       },
@@ -184,9 +196,25 @@ test("Validate removeAuthenticatedOperations preserves operations with optional 
     paths: {
       path: {
         get: {
-          responses: {},
+          responses: {
+            200: {
+              description: "This should be preserved",
+            },
+          },
         },
       },
+    },
+  });
+  // Make sure original document was not changed
+  c.deepEqual(docWithAuthenticated.paths.path?.get?.responses, {
+    200: {
+      description: "This should be preserved",
+    },
+    401: {
+      description: "This should be removed",
+    },
+    403: {
+      description: "This also should bee removed",
     },
   });
 });
