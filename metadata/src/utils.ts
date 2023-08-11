@@ -7,6 +7,9 @@ import { OpenAPIV3 as openapi } from "openapi-types";
 /**
  * Helper function to remove all authenticated {@link openapi.OperationObject}s from given {@link openapi.Document}.
  * A single {@link openapi.OperationObject} is deemed to have authenticated when its `security` property has at least one element.
+ *
+ * Notice that the `401` and `403` responses are cleaned up from all the operations which have security schemes defined.
+ * The modifications are visible only in the return value of this function, the original objects are _not_ modified.
  * @param metadata The {@link openapi.Document} to search for authenticated operations.
  * @returns A new {@link openapi.Document} containing only operations which are not deemed to be authenticated. If no such operations are left, returns `undefined`.
  */
@@ -25,7 +28,8 @@ export const removeAuthenticatedOperations = (
         security.length > 0 &&
         security.every((sec) => Object.keys(sec).length > 0),
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      ({ security: _, ...operation }) => operation,
+      ({ security: _, ...operation }) =>
+        removeAuthenticationRelatedResponses(operation),
     ),
   );
   return originalPathsLength > unauthenticatedPaths.length ||
@@ -61,7 +65,8 @@ export function* removeOperationsMatchingFilter(
   transform: (op: openapi.OperationObject) => openapi.OperationObject,
 ) {
   for (const [pathKey, pathObject] of Object.entries(metadata.paths)) {
-    let pathObjectOrExclude: typeof pathObject | string = pathObject;
+    let pathObjectOrExclude: openapi.PathItemObject | undefined | string =
+      pathObject;
     if (pathObject) {
       const methodsInPath = Object.values(openapi.HttpMethods)
         .map((method) => ({ method, operation: pathObject[method] }))
@@ -139,4 +144,16 @@ const removeSecuritySchemes = (doc: openapi.Document): openapi.Document => {
     }
   }
   return doc;
+};
+
+const removeAuthenticationRelatedResponses = (
+  operation: openapi.OperationObject,
+): openapi.OperationObject => {
+  const {
+    responses: { 401: _401, 403: _403, ...remainingResponses },
+    ...remainingOperation
+  } = operation;
+  return !!_401 || !!_403
+    ? { ...remainingOperation, responses: remainingResponses }
+    : operation;
 };
